@@ -1,0 +1,359 @@
+<template>
+  <n-space vertical :size="24">
+    <n-card title="DNS 记录管理">
+      <template #header-extra>
+        <n-button type="primary" @click="showAddModal = true">
+          添加记录
+        </n-button>
+      </template>
+
+      <n-form label-placement="left" label-width="100" style="margin-bottom: 16px">
+        <n-form-item label="选择域名">
+          <n-select
+            v-model:value="selectedZone"
+            :options="zoneOptions"
+            placeholder="请选择域名"
+            :loading="loadingZones"
+            @update:value="loadDnsRecords"
+          />
+        </n-form-item>
+      </n-form>
+
+      <n-spin :show="loadingRecords">
+        <n-data-table
+          :columns="columns"
+          :data="dnsRecords"
+          :pagination="{ pageSize: 10 }"
+          :bordered="false"
+        />
+      </n-spin>
+    </n-card>
+
+    <!-- 添加 DNS 记录弹窗 -->
+    <n-modal v-model:show="showAddModal" preset="dialog" title="添加 DNS 记录" style="width: 600px">
+      <n-form
+        ref="formRef"
+        :model="dnsForm"
+        :rules="formRules"
+        label-placement="left"
+        label-width="100"
+      >
+        <n-form-item label="记录类型" path="type">
+          <n-select
+            v-model:value="dnsForm.type"
+            :options="recordTypeOptions"
+          />
+        </n-form-item>
+
+        <n-form-item label="名称" path="name">
+          <n-input
+            v-model:value="dnsForm.name"
+            placeholder="例如: www 或 @ (根域名)"
+          />
+        </n-form-item>
+
+        <n-form-item label="内容" path="content">
+          <n-input
+            v-model:value="dnsForm.content"
+            placeholder="例如: 192.168.1.1 或 example.com"
+          />
+        </n-form-item>
+
+        <n-form-item label="TTL" path="ttl">
+          <n-input-number
+            v-model:value="dnsForm.ttl"
+            :min="1"
+            :max="86400"
+            style="width: 100%"
+          >
+            <template #suffix>秒</template>
+          </n-input-number>
+        </n-form-item>
+
+        <n-form-item label="代理状态" path="proxied">
+          <n-switch v-model:value="dnsForm.proxied">
+            <template #checked>已代理</template>
+            <template #unchecked>仅 DNS</template>
+          </n-switch>
+        </n-form-item>
+
+        <n-form-item v-if="dnsForm.type === 'MX'" label="优先级" path="priority">
+          <n-input-number
+            v-model:value="dnsForm.priority"
+            :min="0"
+            :max="65535"
+            style="width: 100%"
+          />
+        </n-form-item>
+      </n-form>
+
+      <template #action>
+        <n-space>
+          <n-button @click="showAddModal = false">取消</n-button>
+          <n-button type="primary" :loading="submitting" @click="handleAddRecord">
+            确认
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 编辑 DNS 记录弹窗 -->
+    <n-modal v-model:show="showEditModal" preset="dialog" title="编辑 DNS 记录" style="width: 600px">
+      <n-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="formRules"
+        label-placement="left"
+        label-width="100"
+      >
+        <n-form-item label="记录类型" path="type">
+          <n-select
+            v-model:value="editForm.type"
+            :options="recordTypeOptions"
+            disabled
+          />
+        </n-form-item>
+
+        <n-form-item label="名称" path="name">
+          <n-input v-model:value="editForm.name" />
+        </n-form-item>
+
+        <n-form-item label="内容" path="content">
+          <n-input v-model:value="editForm.content" />
+        </n-form-item>
+
+        <n-form-item label="TTL" path="ttl">
+          <n-input-number
+            v-model:value="editForm.ttl"
+            :min="1"
+            :max="86400"
+            style="width: 100%"
+          >
+            <template #suffix>秒</template>
+          </n-input-number>
+        </n-form-item>
+
+        <n-form-item label="代理状态" path="proxied">
+          <n-switch v-model:value="editForm.proxied">
+            <template #checked>已代理</template>
+            <template #unchecked>仅 DNS</template>
+          </n-switch>
+        </n-form-item>
+      </n-form>
+
+      <template #action>
+        <n-space>
+          <n-button @click="showEditModal = false">取消</n-button>
+          <n-button type="primary" :loading="submitting" @click="handleUpdateRecord">
+            确认
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+  </n-space>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed, h } from 'vue'
+import { useMessage, NButton, NSpace, NTag, NSwitch } from 'naive-ui'
+import { cloudflareApi, type Zone, type DnsRecord } from '@/api'
+import { useAccountStore } from '@/stores/account'
+
+const accountStore = useAccountStore()
+const message = useMessage()
+
+const loadingZones = ref(false)
+const loadingRecords = ref(false)
+const submitting = ref(false)
+const showAddModal = ref(false)
+const showEditModal = ref(false)
+
+const zones = ref<Zone[]>([])
+const selectedZone = ref('')
+const dnsRecords = ref<DnsRecord[]>([])
+
+const dnsForm = ref({
+  type: 'A',
+  name: '',
+  content: '',
+  ttl: 1,
+  proxied: true,
+  priority: 10
+})
+
+const editForm = ref<DnsRecord>({
+  zone_id: '',
+  type: 'A',
+  name: '',
+  content: '',
+  ttl: 1,
+  proxied: true
+})
+
+const formRules = {
+  name: { required: true, message: '请输入名称', trigger: 'blur' },
+  content: { required: true, message: '请输入内容', trigger: 'blur' }
+}
+
+const recordTypeOptions = [
+  { label: 'A', value: 'A' },
+  { label: 'AAAA', value: 'AAAA' },
+  { label: 'CNAME', value: 'CNAME' },
+  { label: 'MX', value: 'MX' },
+  { label: 'TXT', value: 'TXT' },
+  { label: 'SRV', value: 'SRV' },
+  { label: 'NS', value: 'NS' }
+]
+
+const zoneOptions = computed(() =>
+  zones.value.map(zone => ({
+    label: zone.name,
+    value: zone.id
+  }))
+)
+
+const columns = [
+  { title: '类型', key: 'type', width: 80 },
+  { title: '名称', key: 'name' },
+  { title: '内容', key: 'content' },
+  {
+    title: 'TTL',
+    key: 'ttl',
+    width: 80,
+    render: (row: DnsRecord) => (row.ttl === 1 ? '自动' : `${row.ttl}s`)
+  },
+  {
+    title: '代理状态',
+    key: 'proxied',
+    width: 120,
+    render: (row: DnsRecord) =>
+      h(
+        NTag,
+        { type: row.proxied ? 'success' : 'default', size: 'small' },
+        { default: () => (row.proxied ? '已代理' : '仅 DNS') }
+      )
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 150,
+    render: (row: DnsRecord) =>
+      h(
+        NSpace,
+        {},
+        {
+          default: () => [
+            h(
+              NButton,
+              {
+                size: 'small',
+                onClick: () => handleEdit(row)
+              },
+              { default: () => '编辑' }
+            ),
+            h(
+              NButton,
+              {
+                size: 'small',
+                type: 'error',
+                secondary: true,
+                onClick: () => handleDelete(row)
+              },
+              { default: () => '删除' }
+            )
+          ]
+        }
+      )
+  }
+]
+
+async function loadZones() {
+  if (!accountStore.currentAccount) return
+
+  loadingZones.value = true
+  try {
+    zones.value = await cloudflareApi.getZones()
+    if (zones.value.length > 0) {
+      selectedZone.value = zones.value[0].id
+      await loadDnsRecords()
+    }
+  } catch (error) {
+    message.error('加载域名列表失败')
+  } finally {
+    loadingZones.value = false
+  }
+}
+
+async function loadDnsRecords() {
+  if (!selectedZone.value) return
+
+  loadingRecords.value = true
+  try {
+    dnsRecords.value = await cloudflareApi.getDnsRecords(selectedZone.value)
+  } catch (error) {
+    message.error('加载 DNS 记录失败')
+  } finally {
+    loadingRecords.value = false
+  }
+}
+
+async function handleAddRecord() {
+  submitting.value = true
+  try {
+    await cloudflareApi.createDnsRecord({
+      zone_id: selectedZone.value,
+      ...dnsForm.value
+    })
+
+    message.success('DNS 记录添加成功')
+    showAddModal.value = false
+    dnsForm.value = {
+      type: 'A',
+      name: '',
+      content: '',
+      ttl: 1,
+      proxied: true,
+      priority: 10
+    }
+    await loadDnsRecords()
+  } catch (error: any) {
+    message.error(error?.message || '添加失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+function handleEdit(record: DnsRecord) {
+  editForm.value = { ...record }
+  showEditModal.value = true
+}
+
+async function handleUpdateRecord() {
+  submitting.value = true
+  try {
+    await cloudflareApi.updateDnsRecord(editForm.value)
+
+    message.success('DNS 记录更新成功')
+    showEditModal.value = false
+    await loadDnsRecords()
+  } catch (error: any) {
+    message.error(error?.message || '更新失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleDelete(record: DnsRecord) {
+  try {
+    await cloudflareApi.deleteDnsRecord(record.zone_id, record.id!)
+    message.success('DNS 记录删除成功')
+    await loadDnsRecords()
+  } catch (error: any) {
+    message.error(error?.message || '删除失败')
+  }
+}
+
+onMounted(() => {
+  loadZones()
+})
+</script>
