@@ -2,7 +2,7 @@
 FROM rust:1.83-alpine as builder
 
 # 安装必要的构建工具
-RUN apk add --no-cache musl-dev openssl-dev
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig
 
 WORKDIR /app
 
