@@ -16,7 +16,14 @@ api.interceptors.request.use(
     const accountStore = useAccountStore()
     const credentials = accountStore.getCurrentCredentials()
 
-    if (credentials && config.data) {
+    // 确保所有请求都有 credentials
+    if (credentials) {
+      // 如果没有 data，初始化为空对象
+      if (!config.data) {
+        config.data = {}
+      }
+
+      // 添加 credentials
       config.data = {
         credentials,
         ...config.data

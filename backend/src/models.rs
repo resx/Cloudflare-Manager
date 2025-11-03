@@ -46,8 +46,10 @@ pub struct Zone {
 pub struct DnsRecord {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
     #[serde(rename = "type")]
+    #[serde(alias = "recordType")]
     pub record_type: String,
     pub name: String,
     pub content: String,
@@ -65,12 +67,15 @@ fn default_ttl() -> u32 {
 
 #[derive(Debug, Deserialize)]
 pub struct GetDnsRecordsRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct DeleteRecordRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
+    #[serde(alias = "recordId")]
     pub record_id: String,
 }
 
@@ -83,11 +88,11 @@ pub struct FirewallRule {
     pub action: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub paused: bool,
 }
 
-fn default_true() -> bool {
+fn default_false() -> bool {
     false
 }
 
@@ -102,24 +107,30 @@ pub struct FirewallFilter {
 
 #[derive(Debug, Deserialize)]
 pub struct GetFirewallRulesRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct DeleteFirewallRuleRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
+    #[serde(alias = "ruleId")]
     pub rule_id: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateFirewallRuleRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
     pub rule: FirewallRule,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateFirewallRuleRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
+    #[serde(alias = "ruleId")]
     pub rule_id: String,
     pub rule: FirewallRule,
 }
@@ -127,22 +138,30 @@ pub struct UpdateFirewallRuleRequest {
 // Worker 部署
 #[derive(Debug, Deserialize)]
 pub struct DeployWorkerRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
+    #[serde(alias = "scriptName")]
     pub script_name: String,
+    #[serde(alias = "targetUrl")]
     pub target_url: String,
+    #[serde(alias = "accessDomain")]
     pub access_domain: String,
+    #[serde(alias = "cacheTtl")]
     pub cache_ttl: u32,
+    #[serde(alias = "cdnNode")]
     pub cdn_node: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ListWorkersRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
 }
 
 // Zone 设置
 #[derive(Debug, Deserialize)]
 pub struct GetZoneSettingsRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
 }
 
@@ -150,11 +169,14 @@ pub struct GetZoneSettingsRequest {
 pub struct ZoneSetting {
     pub id: String,
     pub value: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "modifiedOn")]
     pub modified_on: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateZoneSettingsRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
     pub settings: Vec<UpdateSetting>,
 }
@@ -168,6 +190,7 @@ pub struct UpdateSetting {
 // 自动优化
 #[derive(Debug, Deserialize)]
 pub struct OptimizeZoneRequest {
+    #[serde(alias = "zoneId")]
     pub zone_id: String,
     pub mode: OptimizeMode,
 }
