@@ -1,10 +1,34 @@
 use actix_cors::Cors;
-use actix_web::{middleware::Logger, web, App, HttpServer};
+use actix_web::{middleware::Logger, web, App, HttpServer, error};
 use std::env;
 
 mod cloudflare;
 mod handlers;
 mod models;
+
+// 自定义 JSON 错误处理器
+fn json_error_handler(err: error::JsonPayloadError, _req: &actix_web::HttpRequest) -> error::Error {
+    use actix_web::error::JsonPayloadError;
+
+    let detail = err.to_string();
+    log::error!("JSON payload error: {}", detail);
+
+    let resp = match &err {
+        JsonPayloadError::Deserialize(e) => {
+            log::error!("Deserialization error: {}", e);
+            actix_web::HttpResponse::BadRequest().json(serde_json::json!({
+                "success": false,
+                "error": format!("Invalid JSON format: {}", e)
+            }))
+        }
+        _ => actix_web::HttpResponse::BadRequest().json(serde_json::json!({
+            "success": false,
+            "error": detail
+        }))
+    };
+
+    error::InternalError::from_response(err, resp).into()
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -26,7 +50,13 @@ async fn main() -> std::io::Result<()> {
             .allow_any_header()
             .max_age(3600);
 
+        // JSON 配置 - 增加大小限制和自定义错误处理
+        let json_cfg = web::JsonConfig::default()
+            .limit(4096)
+            .error_handler(json_error_handler);
+
         App::new()
+            .app_data(json_cfg)
             .wrap(cors)
             .wrap(Logger::default())
             // 健康检查

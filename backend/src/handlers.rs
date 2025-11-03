@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder, HttpRequest};
 use crate::cloudflare::CloudflareClient;
 use crate::models::*;
 
@@ -12,7 +12,17 @@ pub async fn health_check() -> impl Responder {
 }
 
 // 获取所有 Zone
-pub async fn get_zones(req: web::Json<CloudflareRequest<serde_json::Value>>) -> impl Responder {
+pub async fn get_zones(payload: String, _req: HttpRequest) -> impl Responder {
+    log::debug!("get_zones received payload: {}", payload);
+
+    let req: CloudflareRequest<serde_json::Value> = match serde_json::from_str(&payload) {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("Failed to parse get_zones request: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(format!("Invalid request format: {}", e)));
+        }
+    };
+
     let client = match CloudflareClient::new(&req.credentials) {
         Ok(c) => c,
         Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
@@ -25,15 +35,37 @@ pub async fn get_zones(req: web::Json<CloudflareRequest<serde_json::Value>>) -> 
 }
 
 // 获取 DNS 记录
-pub async fn get_dns_records(req: web::Json<CloudflareRequest<GetDnsRecordsRequest>>) -> impl Responder {
+pub async fn get_dns_records(payload: String, _req: HttpRequest) -> impl Responder {
+    log::debug!("get_dns_records received payload: {}", payload);
+
+    let req: CloudflareRequest<GetDnsRecordsRequest> = match serde_json::from_str(&payload) {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("Failed to parse get_dns_records request: {}",  e);
+            log::error!("Raw payload was: {}", payload);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(format!("Invalid request format: {}", e)));
+        }
+    };
+
+    log::debug!("Parsed zone_id: {}", req.data.zone_id);
+
     let client = match CloudflareClient::new(&req.credentials) {
         Ok(c) => c,
-        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+        Err(e) => {
+            log::error!("Failed to create CloudflareClient: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e));
+        }
     };
 
     match client.get_dns_records(&req.data.zone_id).await {
-        Ok(records) => HttpResponse::Ok().json(ApiResponse::success(records)),
-        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+        Ok(records) => {
+            log::info!("Successfully fetched {} DNS records for zone {}", records.len(), req.data.zone_id);
+            HttpResponse::Ok().json(ApiResponse::success(records))
+        }
+        Err(e) => {
+            log::error!("Failed to get DNS records: {}", e);
+            HttpResponse::BadRequest().json(ApiResponse::<()>::error(e))
+        }
     }
 }
 
