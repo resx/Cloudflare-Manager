@@ -110,7 +110,6 @@
           <n-select
             v-model:value="editForm.type"
             :options="recordTypeOptions"
-            disabled
           />
         </n-form-item>
 
@@ -202,7 +201,21 @@ const recordTypeOptions = [
   { label: 'MX', value: 'MX' },
   { label: 'TXT', value: 'TXT' },
   { label: 'SRV', value: 'SRV' },
-  { label: 'NS', value: 'NS' }
+  { label: 'NS', value: 'NS' },
+  { label: 'CAA', value: 'CAA' },
+  { label: 'CERT', value: 'CERT' },
+  { label: 'DNSKEY', value: 'DNSKEY' },
+  { label: 'DS', value: 'DS' },
+  { label: 'HTTPS', value: 'HTTPS' },
+  { label: 'LOC', value: 'LOC' },
+  { label: 'NAPTR', value: 'NAPTR' },
+  { label: 'PTR', value: 'PTR' },
+  { label: 'SMIMEA', value: 'SMIMEA' },
+  { label: 'SPF', value: 'SPF' },
+  { label: 'SSHFP', value: 'SSHFP' },
+  { label: 'SVCB', value: 'SVCB' },
+  { label: 'TLSA', value: 'TLSA' },
+  { label: 'URI', value: 'URI' }
 ]
 
 const zoneOptions = computed(() =>
@@ -215,12 +228,29 @@ const zoneOptions = computed(() =>
 const columns = [
   { title: '类型', key: 'type', width: 80 },
   { title: '名称', key: 'name' },
-  { title: '内容', key: 'content' },
+  {
+    title: '内容',
+    key: 'content',
+    render: (row: DnsRecord) => {
+      // 移除 TXT 记录值外部的双引号
+      if (row.type === 'TXT' && row.content.startsWith('"') && row.content.endsWith('"')) {
+        return row.content.slice(1, -1)
+      }
+      return row.content
+    }
+  },
   {
     title: 'TTL',
     key: 'ttl',
-    width: 80,
-    render: (row: DnsRecord) => (row.ttl === 1 ? '自动' : `${row.ttl}s`)
+    width: 100,
+    render: (row: DnsRecord) => {
+      // Cloudflare 的 TTL 显示格式
+      if (row.ttl === 1) return '自动'
+      if (row.ttl < 60) return `${row.ttl} 秒`
+      if (row.ttl < 3600) return `${Math.floor(row.ttl / 60)} 分钟`
+      if (row.ttl < 86400) return `${Math.floor(row.ttl / 3600)} 小时`
+      return `${Math.floor(row.ttl / 86400)} 天`
+    }
   },
   {
     title: '代理状态',
@@ -300,10 +330,19 @@ async function loadDnsRecords() {
 async function handleAddRecord() {
   submitting.value = true
   try {
-    await cloudflareApi.createDnsRecord({
+    const recordToAdd = {
       zone_id: selectedZone.value,
       ...dnsForm.value
-    })
+    }
+
+    // 为 TXT 记录自动添加引号（如果需要）
+    if (recordToAdd.type === 'TXT' &&
+        !recordToAdd.content.startsWith('"') &&
+        !recordToAdd.content.endsWith('"')) {
+      recordToAdd.content = `"${recordToAdd.content}"`
+    }
+
+    await cloudflareApi.createDnsRecord(recordToAdd)
 
     message.success('DNS 记录添加成功')
     showAddModal.value = false
@@ -325,13 +364,28 @@ async function handleAddRecord() {
 
 function handleEdit(record: DnsRecord) {
   editForm.value = { ...record }
+  // 移除 TXT 记录值的外部引号，方便编辑
+  if (editForm.value.type === 'TXT' &&
+      editForm.value.content.startsWith('"') &&
+      editForm.value.content.endsWith('"')) {
+    editForm.value.content = editForm.value.content.slice(1, -1)
+  }
   showEditModal.value = true
 }
 
 async function handleUpdateRecord() {
   submitting.value = true
   try {
-    await cloudflareApi.updateDnsRecord(editForm.value)
+    const recordToUpdate = { ...editForm.value }
+
+    // 为 TXT 记录自动添加引号（如果需要）
+    if (recordToUpdate.type === 'TXT' &&
+        !recordToUpdate.content.startsWith('"') &&
+        !recordToUpdate.content.endsWith('"')) {
+      recordToUpdate.content = `"${recordToUpdate.content}"`
+    }
+
+    await cloudflareApi.updateDnsRecord(recordToUpdate)
 
     message.success('DNS 记录更新成功')
     showEditModal.value = false
