@@ -7,7 +7,7 @@ RUN apk add --no-cache musl-dev openssl-dev
 WORKDIR /app
 
 # 先复制依赖文件以利用 Docker 缓存
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 RUN mkdir src && \
     echo "fn main() {}" > src/main.rs && \
     cargo build --release && \
