@@ -6,23 +6,38 @@ const CLOUDFLARE_API_BASE: &str = "https://api.cloudflare.com/client/v4";
 
 pub struct CloudflareClient {
     client: Client,
-    email: String,
-    api_key: String,
+    credentials: CloudflareCredentials,
 }
 
 impl CloudflareClient {
-    pub fn new(credentials: &CloudflareCredentials) -> Self {
-        CloudflareClient {
-            client: Client::new(),
-            email: credentials.email.clone(),
-            api_key: credentials.api_key.clone(),
+    pub fn new(credentials: &CloudflareCredentials) -> Result<Self, String> {
+        // 验证凭证
+        if !credentials.is_valid() {
+            return Err("Invalid credentials: must provide either api_token or (email + api_key)".to_string());
         }
+
+        Ok(CloudflareClient {
+            client: Client::new(),
+            credentials: credentials.clone(),
+        })
     }
 
     fn get_headers(&self) -> header::HeaderMap {
         let mut headers = header::HeaderMap::new();
-        headers.insert("X-Auth-Email", header::HeaderValue::from_str(&self.email).unwrap());
-        headers.insert("X-Auth-Key", header::HeaderValue::from_str(&self.api_key).unwrap());
+
+        // 优先使用 API Token（推荐方式）
+        if let Some(token) = &self.credentials.api_token {
+            headers.insert(
+                header::AUTHORIZATION,
+                header::HeaderValue::from_str(&format!("Bearer {}", token)).unwrap()
+            );
+        }
+        // 回退到旧式认证（向后兼容）
+        else if let (Some(email), Some(api_key)) = (&self.credentials.email, &self.credentials.api_key) {
+            headers.insert("X-Auth-Email", header::HeaderValue::from_str(email).unwrap());
+            headers.insert("X-Auth-Key", header::HeaderValue::from_str(api_key).unwrap());
+        }
+
         headers.insert(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
         headers
     }

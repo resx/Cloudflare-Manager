@@ -3,8 +3,23 @@ use serde::{Deserialize, Serialize};
 // Cloudflare API 凭证
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CloudflareCredentials {
-    pub email: String,
-    pub api_key: String,
+    // 推荐使用 API Token（更安全）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_token: Option<String>,
+
+    // 旧式认证方式（仅作向后兼容）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+}
+
+impl CloudflareCredentials {
+    // 验证凭证是否有效
+    pub fn is_valid(&self) -> bool {
+        // 必须提供 API Token 或者 Email + API Key
+        self.api_token.is_some() || (self.email.is_some() && self.api_key.is_some())
+    }
 }
 
 // 通用请求结构
