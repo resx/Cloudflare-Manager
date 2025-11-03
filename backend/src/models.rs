@@ -5,12 +5,14 @@ use serde::{Deserialize, Serialize};
 pub struct CloudflareCredentials {
     // 推荐使用 API Token（更安全）
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "apiToken")]  // 支持驼峰命名
     pub api_token: Option<String>,
 
     // 旧式认证方式（仅作向后兼容）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "apiKey")]  // 支持驼峰命名
     pub api_key: Option<String>,
 }
 
