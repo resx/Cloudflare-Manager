@@ -96,7 +96,8 @@ impl CloudflareClient {
 
     // 创建 DNS 记录
     pub async fn create_dns_record(&self, record: &DnsRecord) -> Result<DnsRecord, String> {
-        let url = format!("{}/zones/{}/dns_records", CLOUDFLARE_API_BASE, record.zone_id);
+        let zone_id = record.zone_id.as_ref().ok_or("Zone ID is required for creating DNS record")?;
+        let url = format!("{}/zones/{}/dns_records", CLOUDFLARE_API_BASE, zone_id);
 
         let response = self.client
             .post(&url)
@@ -124,7 +125,8 @@ impl CloudflareClient {
     // 更新 DNS 记录
     pub async fn update_dns_record(&self, record: &DnsRecord) -> Result<DnsRecord, String> {
         let record_id = record.id.as_ref().ok_or("Record ID is required")?;
-        let url = format!("{}/zones/{}/dns_records/{}", CLOUDFLARE_API_BASE, record.zone_id, record_id);
+        let zone_id = record.zone_id.as_ref().ok_or("Zone ID is required for updating DNS record")?;
+        let url = format!("{}/zones/{}/dns_records/{}", CLOUDFLARE_API_BASE, zone_id, record_id);
 
         let response = self.client
             .put(&url)

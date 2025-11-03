@@ -46,8 +46,9 @@ pub struct Zone {
 pub struct DnsRecord {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(alias = "zoneId")]
-    pub zone_id: String,
+    pub zone_id: Option<String>,
     #[serde(rename = "type")]
     #[serde(alias = "recordType")]
     pub record_type: String,
