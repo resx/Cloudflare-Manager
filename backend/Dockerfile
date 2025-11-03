@@ -1,5 +1,5 @@
 # 多阶段构建 - Rust 后端
-FROM rust:1.75-alpine as builder
+FROM rust:1.83-alpine as builder
 
 # 安装必要的构建工具
 RUN apk add --no-cache musl-dev openssl-dev
