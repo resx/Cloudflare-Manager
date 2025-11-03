@@ -8,10 +8,10 @@ services:
       dockerfile: Dockerfile
     container_name: cf-manager-frontend
     restart: unless-stopped
+    ports:
+      - "3000:80"
     environment:
       - NODE_ENV=production
-    volumes:
-      - ./frontend/dist:/app/dist:ro
     networks:
       - cf-network
     labels:
@@ -32,25 +32,6 @@ services:
       - cf-network
     labels:
       - "com.cloudflare-manager.service=backend"
-
-  # Nginx 反向代理
-  nginx:
-    image: nginx:alpine
-    container_name: cf-manager-nginx
-    restart: unless-stopped
-    ports:
-      - "3000:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./frontend/dist:/usr/share/nginx/html:ro
-    depends_on:
-      - frontend
-      - backend
-    networks:
-      - cf-network
-    labels:
-      - "com.cloudflare-manager.service=nginx"
 
 networks:
   cf-network:

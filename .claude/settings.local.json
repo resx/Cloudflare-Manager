@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cargo generate-lockfile:*)"
+      "Bash(cargo generate-lockfile:*)",
+      "Bash(docker compose:*)"
     ],
     "deny": [],
     "ask": []
