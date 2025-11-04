@@ -115,53 +115,57 @@
     </n-layout>
 
     <!-- 添加账户弹窗 -->
-    <n-modal v-model:show="showAccountModal" preset="dialog" title="添加 Cloudflare 账户" style="width: 550px">
-      <n-form ref="formRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="110">
-        <n-alert type="info" style="margin-bottom: 16px; font-size: 13px">
-          <strong>必填：</strong>Email + Global API Key（用于所有基础功能）<br>
-          <strong>可选：</strong>API Token（仅用于 Analytics 统计分析功能）
+    <n-modal v-model:show="showAccountModal" preset="dialog" title="添加 Cloudflare 账户" style="width: 500px">
+      <n-form ref="formRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="100">
+        <n-alert type="info" style="margin-bottom: 16px">
+          推荐使用 API Token 进行认证，更加安全且支持所有功能（包括 GraphQL Analytics API）
         </n-alert>
 
-        <!-- Email + API Key（必填） -->
-        <n-divider style="margin: 12px 0; font-weight: bold">基础认证（必填）</n-divider>
-
-        <n-form-item label="邮箱" path="email">
-          <n-input v-model:value="accountForm.email" placeholder="your@email.com" />
+        <!-- 认证方式选择 -->
+        <n-form-item label="认证方式">
+          <n-radio-group v-model:value="accountForm.authType">
+            <n-space>
+              <n-radio value="token">API Token（推荐）</n-radio>
+              <n-radio value="key">Email + API Key（旧方式）</n-radio>
+            </n-space>
+          </n-radio-group>
         </n-form-item>
 
-        <n-form-item label="Global API Key" path="apiKey">
-          <n-input
-            v-model:value="accountForm.apiKey"
-            type="password"
-            show-password-on="click"
-            placeholder="输入 Global API Key"
-          />
-        </n-form-item>
+        <!-- API Token 方式 -->
+        <template v-if="accountForm.authType === 'token'">
+          <n-form-item label="API Token" path="apiToken">
+            <n-input
+              v-model:value="accountForm.apiToken"
+              type="password"
+              show-password-on="click"
+              placeholder="输入 API Token"
+            />
+          </n-form-item>
+          <n-alert type="info" style="margin-bottom: 16px; font-size: 12px">
+            在 Cloudflare Dashboard → My Profile → API Tokens 中创建 Token<br>
+            需要权限：Zone.Analytics (Read), Zone.Zone (Read), Zone.DNS (Edit)
+          </n-alert>
+        </template>
 
-        <n-alert type="info" style="margin-bottom: 16px; font-size: 12px">
-          在 Cloudflare Dashboard → My Profile → API Tokens → Global API Key → View
-        </n-alert>
+        <!-- Email + API Key ��式 -->
+        <template v-else>
+          <n-form-item label="邮箱" path="email">
+            <n-input v-model:value="accountForm.email" placeholder="your@email.com" />
+          </n-form-item>
+          <n-form-item label="API Key" path="apiKey">
+            <n-input
+              v-model:value="accountForm.apiKey"
+              type="password"
+              show-password-on="click"
+              placeholder="Global API Key"
+            />
+          </n-form-item>
+          <n-alert type="warning" style="margin-bottom: 16px; font-size: 12px">
+            注意：Email + API Key 方式不支持 GraphQL Analytics API
+          </n-alert>
+        </template>
 
-        <!-- API Token（可选） -->
-        <n-divider style="margin: 12px 0; font-weight: bold">Analytics 认证（可选）</n-divider>
-
-        <n-form-item label="API Token">
-          <n-input
-            v-model:value="accountForm.apiToken"
-            type="password"
-            show-password-on="click"
-            placeholder="留空则 Analytics 功能不可用"
-          />
-        </n-form-item>
-
-        <n-alert type="warning" style="margin-bottom: 16px; font-size: 12px">
-          如需使用 Analytics 功能，请创建具有 <strong>Zone.Analytics (Read)</strong> 权限的 API Token
-        </n-alert>
-
-        <!-- 别名 -->
-        <n-divider style="margin: 12px 0"></n-divider>
-
-        <n-form-item label="别名">
+        <n-form-item label="别名" path="alias">
           <n-input v-model:value="accountForm.alias" placeholder="账户别名（可选）" />
         </n-form-item>
       </n-form>
@@ -177,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h, onMounted, watch, provide } from 'vue'
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMessage, NIcon } from 'naive-ui'
 import type { MenuOption, DropdownOption } from 'naive-ui'
@@ -223,15 +227,44 @@ const zones = ref<Zone[]>([])
 const currentZone = ref<Zone | null>(null)
 
 const accountForm = ref({
+  authType: 'token' as 'token' | 'key',
+  apiToken: '',
   email: '',
   apiKey: '',
-  apiToken: '',
   alias: ''
 })
 
 const formRules = {
-  email: { required: true, message: '请输入邮箱', trigger: 'blur' },
-  apiKey: { required: true, message: '请输入 Global API Key', trigger: 'blur' }
+  apiToken: {
+    required: true,
+    trigger: 'blur',
+    validator: (_rule: any, value: string) => {
+      if (accountForm.value.authType === 'token' && !value) {
+        return new Error('请输入 API Token')
+      }
+      return true
+    }
+  },
+  email: {
+    required: true,
+    trigger: 'blur',
+    validator: (_rule: any, value: string) => {
+      if (accountForm.value.authType === 'key' && !value) {
+        return new Error('请输入邮箱')
+      }
+      return true
+    }
+  },
+  apiKey: {
+    required: true,
+    trigger: 'blur',
+    validator: (_rule: any, value: string) => {
+      if (accountForm.value.authType === 'key' && !value) {
+        return new Error('请输入 API Key')
+      }
+      return true
+    }
+  }
 }
 
 // 菜单图标渲染
@@ -245,11 +278,6 @@ const globalMenuOptions: MenuOption[] = [
     label: '域名管理',
     key: '/zones',
     icon: renderIcon(GlobeOutline)
-  },
-  {
-    label: '账户管理',
-    key: '/accounts',
-    icon: renderIcon(PersonOutline)
   },
   {
     label: '一键加速',
@@ -400,12 +428,10 @@ async function loadZones() {
 
       if (savedZone) {
         currentZone.value = savedZone
-        console.log('Loaded zones, setting currentZone to saved:', savedZone.name)
       } else {
         // 如果没有保存或找不到，使用第一个域名
         currentZone.value = zones.value[0]
         localStorage.setItem('currentZoneId', currentZone.value.id)
-        console.log('Loaded zones, setting currentZone to first:', currentZone.value.name)
       }
     }
   } catch (error) {
@@ -448,20 +474,26 @@ function handleThemeSelect(key: string) {
 }
 
 function handleAddAccount() {
-  const account = accountStore.addAccount({
-    email: accountForm.value.email,
-    apiKey: accountForm.value.apiKey,
-    apiToken: accountForm.value.apiToken || undefined,
-    alias: accountForm.value.alias
-  })
+  const credentials = accountForm.value.authType === 'token'
+    ? {
+        apiToken: accountForm.value.apiToken,
+        alias: accountForm.value.alias
+      }
+    : {
+        email: accountForm.value.email,
+        apiKey: accountForm.value.apiKey,
+        alias: accountForm.value.alias
+      }
 
+  const account = accountStore.addAccount(credentials)
   if (account) {
     accountStore.switchAccount(account.id)
     showAccountModal.value = false
     accountForm.value = {
+      authType: 'token',
+      apiToken: '',
       email: '',
       apiKey: '',
-      apiToken: '',
       alias: ''
     }
     loadZones()
@@ -477,30 +509,17 @@ onMounted(() => {
   }
 })
 
-// 提供 currentZone 给子组件使用
-provide('currentZone', currentZone)
-
-// 同步 currentZone 的函数
-function syncCurrentZone() {
+// 监听路由变化，同步 currentZone
+watch(() => route.path, () => {
+  // 检查 localStorage 中的 currentZoneId 是否变化
   const savedZoneId = localStorage.getItem('currentZoneId')
-  if (savedZoneId && zones.value.length > 0 && currentZone.value?.id !== savedZoneId) {
+  if (savedZoneId && currentZone.value?.id !== savedZoneId) {
     const zone = zones.value.find(z => z.id === savedZoneId)
     if (zone) {
-      console.log('Syncing currentZone to:', zone.name)
       currentZone.value = zone
     }
   }
-}
-
-// 监听路由变化，同步 currentZone
-watch(() => route.path, () => {
-  syncCurrentZone()
-}, { flush: 'post' })
-
-// 监听 zones 变化，同步 currentZone（确保 zones 加载完成后同步）
-watch(zones, () => {
-  syncCurrentZone()
-}, { flush: 'post' })
+})
 </script>
 
 <style scoped>

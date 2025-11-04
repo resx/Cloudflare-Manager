@@ -7,18 +7,6 @@
         </n-button>
       </template>
 
-      <n-form label-placement="left" label-width="100" style="margin-bottom: 16px">
-        <n-form-item label="选择域名">
-          <n-select
-            v-model:value="selectedZone"
-            :options="zoneOptions"
-            placeholder="请选择域名"
-            :loading="loadingZones"
-            @update:value="loadDnsRecords"
-          />
-        </n-form-item>
-      </n-form>
-
       <n-spin :show="loadingRecords">
         <n-data-table
           :columns="columns"
@@ -147,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, h } from 'vue'
+import { ref, onMounted, computed, h, watch, inject, type Ref } from 'vue'
 import { useMessage, NButton, NSpace, NTag, NSwitch } from 'naive-ui'
 import { cloudflareApi, type Zone, type DnsRecord } from '@/api'
 import { useAccountStore } from '@/stores/account'
@@ -155,14 +143,14 @@ import { useAccountStore } from '@/stores/account'
 const accountStore = useAccountStore()
 const message = useMessage()
 
-const loadingZones = ref(false)
+// 从 Layout 获取当前域名
+const currentZone = inject<Ref<Zone | null>>('currentZone')
+
 const loadingRecords = ref(false)
 const submitting = ref(false)
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 
-const zones = ref<Zone[]>([])
-const selectedZone = ref('')
 const dnsRecords = ref<DnsRecord[]>([])
 
 const dnsForm = ref({
@@ -226,13 +214,6 @@ const ttlOptions = [
   { label: '12 小时', value: 43200 },
   { label: '1 天', value: 86400 }
 ]
-
-const zoneOptions = computed(() =>
-  zones.value.map(zone => ({
-    label: zone.name,
-    value: zone.id
-  }))
-)
 
 const columns = [
   { title: '类型', key: 'type', width: 80 },
@@ -306,33 +287,20 @@ const columns = [
   }
 ]
 
-async function loadZones() {
-  if (!accountStore.currentAccount) return
-
-  loadingZones.value = true
-  try {
-    zones.value = await cloudflareApi.getZones()
-    if (zones.value.length > 0) {
-      selectedZone.value = zones.value[0].id
-      await loadDnsRecords()
-    }
-  } catch (error) {
-    message.error('加载域名列表失败')
-  } finally {
-    loadingZones.value = false
-  }
-}
-
 async function loadDnsRecords() {
-  if (!selectedZone.value) return
+  if (!currentZone?.value?.id) {
+    console.log('No currentZone available')
+    return
+  }
 
+  console.log('Loading DNS records for zone:', currentZone.value.name)
   loadingRecords.value = true
   try {
-    const records = await cloudflareApi.getDnsRecords(selectedZone.value)
+    const records = await cloudflareApi.getDnsRecords(currentZone.value.id)
     // 为每条记录添加 zone_id，因为 Cloudflare API 返回的记录不包含此字段
     dnsRecords.value = records.map(record => ({
       ...record,
-      zone_id: selectedZone.value
+      zone_id: currentZone.value!.id
     }))
   } catch (error) {
     message.error('加载 DNS 记录失败')
@@ -342,10 +310,15 @@ async function loadDnsRecords() {
 }
 
 async function handleAddRecord() {
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
+
   submitting.value = true
   try {
     const recordToAdd = {
-      zone_id: selectedZone.value,
+      zone_id: currentZone.value.id,
       ...dnsForm.value
     }
 
@@ -438,6 +411,11 @@ async function handleDelete(record: DnsRecord) {
 }
 
 onMounted(() => {
-  loadZones()
+  loadDnsRecords()
+})
+
+// 监听 currentZone 变化，自动重新加载 DNS 记录
+watch(() => currentZone?.value?.id, () => {
+  loadDnsRecords()
 })
 </script>

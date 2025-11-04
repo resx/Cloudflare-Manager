@@ -216,3 +216,16 @@ pub async fn optimize_zone(req: web::Json<CloudflareRequest<OptimizeZoneRequest>
         Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
     }
 }
+
+// 获取 Analytics 数据
+pub async fn get_analytics(req: web::Json<CloudflareRequest<GetAnalyticsRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_analytics(&req.data.zone_id, &req.data.time_range).await {
+        Ok(analytics) => HttpResponse::Ok().json(ApiResponse::success(analytics)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}

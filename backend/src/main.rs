@@ -78,6 +78,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/zone/settings", web::post().to(handlers::get_zone_settings))
                     .route("/zone/settings/update", web::post().to(handlers::update_zone_settings))
                     .route("/zone/optimize", web::post().to(handlers::optimize_zone))
+                    .route("/analytics", web::post().to(handlers::get_analytics))
             )
     })
     .bind(&bind_addr)?

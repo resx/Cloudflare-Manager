@@ -73,7 +73,12 @@ const columns = [
               NButton,
               {
                 size: 'small',
-                onClick: () => router.push('/dns')
+                onClick: () => {
+                  // 设置当前域名
+                  console.log('Setting currentZoneId to:', row.id, 'Zone name:', row.name)
+                  localStorage.setItem('currentZoneId', row.id)
+                  router.push('/dns')
+                }
               },
               { default: () => 'DNS 记录' }
             ),
@@ -81,7 +86,12 @@ const columns = [
               NButton,
               {
                 size: 'small',
-                onClick: () => router.push('/firewall')
+                onClick: () => {
+                  // 设置当前域名
+                  console.log('Setting currentZoneId to:', row.id, 'Zone name:', row.name)
+                  localStorage.setItem('currentZoneId', row.id)
+                  router.push('/firewall')
+                }
               },
               { default: () => '防火墙' }
             )

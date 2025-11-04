@@ -39,18 +39,50 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'DNS 记录' }
       },
       {
+        path: '/ssl',
+        name: 'SSL',
+        component: () => import('@/views/SSL.vue'),
+        meta: { title: 'SSL/TLS' }
+      },
+      {
+        path: '/cache',
+        name: 'Cache',
+        component: () => import('@/views/Cache.vue'),
+        meta: { title: '缓存管理' }
+      },
+      {
         path: '/firewall',
         name: 'Firewall',
         component: () => import('@/views/Firewall.vue'),
         meta: { title: '防火墙' }
       },
-      // 原有的 Dashboard 和 Accounts 页面保留以兼容
       {
-        path: '/dashboard',
-        redirect: '/zones'
+        path: '/analytics',
+        name: 'Analytics',
+        component: () => import('@/views/Analytics.vue'),
+        meta: { title: '统计分析' }
+      },
+      {
+        path: '/page-rules',
+        name: 'PageRules',
+        component: () => import('@/views/PageRules.vue'),
+        meta: { title: '页面规则' }
+      },
+      {
+        path: '/certificates',
+        name: 'Certificates',
+        component: () => import('@/views/Certificates.vue'),
+        meta: { title: '证书管理' }
       },
       {
         path: '/accounts',
+        name: 'AccountManagement',
+        component: () => import('@/views/AccountManagement.vue'),
+        meta: { title: '账户管理' }
+      },
+      // 原有的 Dashboard 页面保留以兼容
+      {
+        path: '/dashboard',
         redirect: '/zones'
       }
     ]

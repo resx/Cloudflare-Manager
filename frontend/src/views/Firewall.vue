@@ -7,18 +7,6 @@
         </n-button>
       </template>
 
-      <n-form label-placement="left" label-width="100" style="margin-bottom: 16px">
-        <n-form-item label="选择域名">
-          <n-select
-            v-model:value="selectedZone"
-            :options="zoneOptions"
-            placeholder="请选择域名"
-            :loading="loadingZones"
-            @update:value="loadFirewallRules"
-          />
-        </n-form-item>
-      </n-form>
-
       <n-spin :show="loadingRules">
         <n-data-table
           :columns="columns"
@@ -157,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, h } from 'vue'
+import { ref, onMounted, computed, h, watch, inject, type Ref } from 'vue'
 import { useMessage, NButton, NSpace, NTag, NCode } from 'naive-ui'
 import { cloudflareApi, type Zone, type FirewallRule } from '@/api'
 import { useAccountStore } from '@/stores/account'
@@ -165,14 +153,14 @@ import { useAccountStore } from '@/stores/account'
 const accountStore = useAccountStore()
 const message = useMessage()
 
-const loadingZones = ref(false)
+// 从 Layout 获取当前域名
+const currentZone = inject<Ref<Zone | null>>('currentZone')
+
 const loadingRules = ref(false)
 const submitting = ref(false)
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 
-const zones = ref<Zone[]>([])
-const selectedZone = ref('')
 const firewallRules = ref<FirewallRule[]>([])
 
 const ruleForm = ref({
@@ -244,13 +232,6 @@ const ruleTemplates = [
     expression: '(ip.src in {192.168.1.1 192.168.1.0/24})'
   }
 ]
-
-const zoneOptions = computed(() =>
-  zones.value.map(zone => ({
-    label: zone.name,
-    value: zone.id
-  }))
-)
 
 const columns = [
   {
@@ -332,29 +313,16 @@ const columns = [
   }
 ]
 
-async function loadZones() {
-  if (!accountStore.currentAccount) return
-
-  loadingZones.value = true
-  try {
-    zones.value = await cloudflareApi.getZones()
-    if (zones.value.length > 0) {
-      selectedZone.value = zones.value[0].id
-      await loadFirewallRules()
-    }
-  } catch (error) {
-    message.error('加载域名列表失败')
-  } finally {
-    loadingZones.value = false
-  }
-}
-
 async function loadFirewallRules() {
-  if (!selectedZone.value) return
+  if (!currentZone?.value?.id) {
+    console.log('No currentZone available')
+    return
+  }
 
+  console.log('Loading firewall rules for zone:', currentZone.value.name)
   loadingRules.value = true
   try {
-    firewallRules.value = await cloudflareApi.getFirewallRules(selectedZone.value)
+    firewallRules.value = await cloudflareApi.getFirewallRules(currentZone.value.id)
   } catch (error) {
     message.error('加载防火墙规则失败')
   } finally {
@@ -369,9 +337,14 @@ function useTemplate(template: any) {
 }
 
 async function handleAddRule() {
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
+
   submitting.value = true
   try {
-    await cloudflareApi.createFirewallRule(selectedZone.value, {
+    await cloudflareApi.createFirewallRule(currentZone.value.id, {
       filter: {
         expression: ruleForm.value.expression,
         description: ruleForm.value.description
@@ -403,10 +376,15 @@ function handleEdit(rule: FirewallRule) {
 }
 
 async function handleUpdateRule() {
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
+
   submitting.value = true
   try {
     await cloudflareApi.updateFirewallRule(
-      selectedZone.value,
+      currentZone.value.id,
       editForm.value.id!,
       editForm.value
     )
@@ -422,8 +400,13 @@ async function handleUpdateRule() {
 }
 
 async function handleDelete(rule: FirewallRule) {
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
+
   try {
-    await cloudflareApi.deleteFirewallRule(selectedZone.value, rule.id!)
+    await cloudflareApi.deleteFirewallRule(currentZone.value.id, rule.id!)
     message.success('防火墙规则删除成功')
     await loadFirewallRules()
   } catch (error: any) {
@@ -432,6 +415,11 @@ async function handleDelete(rule: FirewallRule) {
 }
 
 onMounted(() => {
-  loadZones()
+  loadFirewallRules()
+})
+
+// 监听 currentZone 变化，自动重新加载防火墙规则
+watch(() => currentZone?.value?.id, () => {
+  loadFirewallRules()
 })
 </script>

@@ -99,6 +99,49 @@ export interface UpdateSetting {
   value: any
 }
 
+export interface AnalyticsStats {
+  totalRequests: number
+  cacheHitRate: number
+  bandwidth: number
+  threats: number
+}
+
+export interface TimeseriesPoint {
+  timestamp: string
+  requests: number
+  cached: number
+  uncached: number
+}
+
+export interface StatusCodeStat {
+  code: string
+  description: string
+  count: number
+  percentage: number
+}
+
+export interface CountryStat {
+  rank: number
+  country: string
+  requests: number
+  percentage: number
+}
+
+export interface ContentStat {
+  rank: number
+  url: string
+  requests: number
+  bandwidth: string
+}
+
+export interface AnalyticsData {
+  stats: AnalyticsStats
+  timeseries: TimeseriesPoint[]
+  statusCodes: StatusCodeStat[]
+  countries: CountryStat[]
+  content: ContentStat[]
+}
+
 export const cloudflareApi = {
   // Zone 相关
   async getZones(): Promise<Zone[]> {
@@ -186,6 +229,15 @@ export const cloudflareApi = {
     const res = await api.post('/cloudflare/zone/optimize', {
       zone_id: zoneId,
       mode
+    })
+    return res.data
+  },
+
+  // Analytics 统计分析
+  async getAnalytics(zoneId: string, timeRange: string): Promise<AnalyticsData> {
+    const res = await api.post('/cloudflare/analytics', {
+      zone_id: zoneId,
+      time_range: timeRange
     })
     return res.data
   }

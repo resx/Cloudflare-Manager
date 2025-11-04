@@ -3,24 +3,22 @@ use serde::{Deserialize, Serialize};
 // Cloudflare API 凭证
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CloudflareCredentials {
-    // 推荐使用 API Token（更安全）
+    // Email + Global API Key（必需，用于大部分 API）
+    pub email: Option<String>,
+    #[serde(alias = "apiKey")]  // 支持驼峰命名
+    pub api_key: Option<String>,
+
+    // API Token（可选，用于 Analytics 等 GraphQL API）
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(alias = "apiToken")]  // 支持驼峰命名
     pub api_token: Option<String>,
-
-    // 旧式认证方式（仅作向后兼容）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(alias = "apiKey")]  // 支持驼峰命名
-    pub api_key: Option<String>,
 }
 
 impl CloudflareCredentials {
     // 验证凭证是否有效
     pub fn is_valid(&self) -> bool {
-        // 必须提供 API Token 或者 Email + API Key
-        self.api_token.is_some() || (self.email.is_some() && self.api_key.is_some())
+        // 必须提供 Email + API Key
+        self.email.is_some() && self.api_key.is_some()
     }
 }
 
@@ -201,6 +199,67 @@ pub struct OptimizeZoneRequest {
 pub enum OptimizeMode {
     Security,
     Performance,
+}
+
+// Analytics 相关
+#[derive(Debug, Deserialize)]
+pub struct GetAnalyticsRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "timeRange")]
+    pub time_range: String, // "24h", "7d", "30d"
+}
+
+#[derive(Debug, Serialize)]
+pub struct AnalyticsData {
+    pub stats: AnalyticsStats,
+    pub timeseries: Vec<TimeseriesPoint>,
+    #[serde(rename = "statusCodes")]
+    pub status_codes: Vec<StatusCodeStat>,
+    pub countries: Vec<CountryStat>,
+    pub content: Vec<ContentStat>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AnalyticsStats {
+    #[serde(rename = "totalRequests")]
+    pub total_requests: u64,
+    #[serde(rename = "cacheHitRate")]
+    pub cache_hit_rate: f64,
+    pub bandwidth: f64,
+    pub threats: u64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TimeseriesPoint {
+    pub timestamp: String,
+    pub requests: u64,
+    pub cached: u64,
+    pub uncached: u64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct StatusCodeStat {
+    pub code: String,
+    pub description: String,
+    pub count: u64,
+    pub percentage: f64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CountryStat {
+    pub rank: u32,
+    pub country: String,
+    pub requests: u64,
+    pub percentage: f64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ContentStat {
+    pub rank: u32,
+    pub url: String,
+    pub requests: u64,
+    pub bandwidth: String,
 }
 
 // API 响应

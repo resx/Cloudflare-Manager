@@ -15,7 +15,9 @@
       "Bash(docker network inspect:*)",
       "Bash(python3:*)",
       "Bash(docker exec:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(npm install:*)",
+      "Bash(timeout 30 docker logs:*)"
     ],
     "deny": [],
     "ask": []

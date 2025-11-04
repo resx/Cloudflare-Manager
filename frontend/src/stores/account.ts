@@ -2,15 +2,19 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export interface CloudflareCredentials {
+  // 主要认证（必需）- 用于大部分 API
   email: string
-  apiKey: string
+  apiKey: string  // Global API Key
+  // 可选的 API Token - 用于 Analytics 等 GraphQL API
+  apiToken?: string
   alias?: string
 }
 
 export interface CloudflareAccount {
   id: string
   email: string
-  apiKey: string
+  apiKey: string  // Global API Key（必需）
+  apiToken?: string  // API Token（可选，用于 Analytics）
   alias: string
   createdAt: string
 }
@@ -54,12 +58,43 @@ export const useAccountStore = defineStore('account', () => {
       id: Date.now().toString(),
       email: credentials.email,
       apiKey: credentials.apiKey,
+      apiToken: credentials.apiToken,
       alias: credentials.alias || credentials.email,
       createdAt: new Date().toISOString()
     }
     accounts.value.push(newAccount)
     saveAccounts()
     return newAccount
+  }
+
+  // 更新账户的 API Token
+  function updateApiToken(accountId: string, apiToken: string) {
+    const account = accounts.value.find(acc => acc.id === accountId)
+    if (account) {
+      account.apiToken = apiToken
+      saveAccounts()
+      return true
+    }
+    return false
+  }
+
+  // 更新账户信息
+  function updateAccount(accountId: string, credentials: CloudflareCredentials) {
+    const account = accounts.value.find(acc => acc.id === accountId)
+    if (account) {
+      account.email = credentials.email
+      account.apiKey = credentials.apiKey
+      account.apiToken = credentials.apiToken
+      account.alias = credentials.alias || credentials.email
+      saveAccounts()
+
+      // 如果更新的是当前账户，同步更新 currentAccount
+      if (currentAccount.value?.id === accountId) {
+        currentAccount.value = { ...account }
+      }
+      return true
+    }
+    return false
   }
 
   // 删除账户
@@ -80,12 +115,13 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
-  // 获取当前凭证
+  // 获取当前凭证（返回所有可用的认证信息）
   function getCurrentCredentials(): CloudflareCredentials | null {
     if (!currentAccount.value) return null
     return {
       email: currentAccount.value.email,
-      apiKey: currentAccount.value.apiKey
+      apiKey: currentAccount.value.apiKey,
+      apiToken: currentAccount.value.apiToken
     }
   }
 
@@ -96,6 +132,8 @@ export const useAccountStore = defineStore('account', () => {
     accounts,
     currentAccount,
     addAccount,
+    updateAccount,
+    updateApiToken,
     removeAccount,
     switchAccount,
     getCurrentCredentials,
