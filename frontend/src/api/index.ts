@@ -58,7 +58,7 @@ export interface Zone {
 
 export interface DnsRecord {
   id?: string
-  zone_id: string
+  zone_id?: string  // 可选，因为 Cloudflare API 返回的记录可能不包含此字段
   type: string
   name: string
   content: string

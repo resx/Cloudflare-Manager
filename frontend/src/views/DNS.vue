@@ -60,14 +60,11 @@
         </n-form-item>
 
         <n-form-item label="TTL" path="ttl">
-          <n-input-number
+          <n-select
             v-model:value="dnsForm.ttl"
-            :min="1"
-            :max="86400"
+            :options="ttlOptions"
             style="width: 100%"
-          >
-            <template #suffix>秒</template>
-          </n-input-number>
+          />
         </n-form-item>
 
         <n-form-item label="代理状态" path="proxied">
@@ -122,14 +119,11 @@
         </n-form-item>
 
         <n-form-item label="TTL" path="ttl">
-          <n-input-number
+          <n-select
             v-model:value="editForm.ttl"
-            :min="1"
-            :max="86400"
+            :options="ttlOptions"
             style="width: 100%"
-          >
-            <template #suffix>秒</template>
-          </n-input-number>
+          />
         </n-form-item>
 
         <n-form-item label="代理状态" path="proxied">
@@ -216,6 +210,21 @@ const recordTypeOptions = [
   { label: 'SVCB', value: 'SVCB' },
   { label: 'TLSA', value: 'TLSA' },
   { label: 'URI', value: 'URI' }
+]
+
+// TTL 选项（参照 Cloudflare 标准）
+const ttlOptions = [
+  { label: '自动', value: 1 },
+  { label: '2 分钟', value: 120 },
+  { label: '5 分钟', value: 300 },
+  { label: '10 分钟', value: 600 },
+  { label: '15 分钟', value: 900 },
+  { label: '30 分钟', value: 1800 },
+  { label: '1 小时', value: 3600 },
+  { label: '2 小时', value: 7200 },
+  { label: '5 小时', value: 18000 },
+  { label: '12 小时', value: 43200 },
+  { label: '1 天', value: 86400 }
 ]
 
 const zoneOptions = computed(() =>
@@ -319,7 +328,12 @@ async function loadDnsRecords() {
 
   loadingRecords.value = true
   try {
-    dnsRecords.value = await cloudflareApi.getDnsRecords(selectedZone.value)
+    const records = await cloudflareApi.getDnsRecords(selectedZone.value)
+    // 为每条记录添加 zone_id，因为 Cloudflare API 返回的记录不包含此字段
+    dnsRecords.value = records.map(record => ({
+      ...record,
+      zone_id: selectedZone.value
+    }))
   } catch (error) {
     message.error('加载 DNS 记录失败')
   } finally {
@@ -364,6 +378,16 @@ async function handleAddRecord() {
 
 function handleEdit(record: DnsRecord) {
   editForm.value = { ...record }
+
+  // 规范化 TTL 值到最接近的预设选项
+  const validTtls = [1, 120, 300, 600, 900, 1800, 3600, 7200, 18000, 43200, 86400]
+  if (!validTtls.includes(editForm.value.ttl)) {
+    // 找到最接近的 TTL 值
+    editForm.value.ttl = validTtls.reduce((prev, curr) =>
+      Math.abs(curr - editForm.value.ttl) < Math.abs(prev - editForm.value.ttl) ? curr : prev
+    )
+  }
+
   // 移除 TXT 记录值的外部引号，方便编辑
   if (editForm.value.type === 'TXT' &&
       editForm.value.content.startsWith('"') &&
@@ -399,7 +423,13 @@ async function handleUpdateRecord() {
 
 async function handleDelete(record: DnsRecord) {
   try {
-    await cloudflareApi.deleteDnsRecord(record.zone_id, record.id!)
+    // 确保 zone_id 和 id 存在
+    if (!record.zone_id || !record.id) {
+      message.error('记录信息不完整，无法删除')
+      return
+    }
+
+    await cloudflareApi.deleteDnsRecord(record.zone_id, record.id)
     message.success('DNS 记录删除成功')
     await loadDnsRecords()
   } catch (error: any) {

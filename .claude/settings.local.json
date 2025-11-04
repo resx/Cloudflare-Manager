@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Bash(cargo generate-lockfile:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(cat:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(ss:*)",
+      "Bash(lsof:*)",
+      "Bash(pwdx:*)",
+      "Bash(readlink:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker network inspect:*)",
+      "Bash(python3:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": [],
     "ask": []
