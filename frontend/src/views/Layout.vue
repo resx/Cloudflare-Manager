@@ -4,32 +4,95 @@
       bordered
       collapse-mode="width"
       :collapsed-width="64"
-      :width="240"
+      :width="260"
       :collapsed="collapsed"
       show-trigger
       @collapse="collapsed = true"
       @expand="collapsed = false"
     >
-      <div class="logo">
-        <n-text v-if="!collapsed" style="font-size: 18px; font-weight: bold">
-          Cloudflare 管理平台
-        </n-text>
-        <n-text v-else style="font-size: 16px; font-weight: bold">CF</n-text>
+      <div class="sidebar-content">
+      <!-- 顶部 Logo 和用户区域 -->
+      <div :class="['header-section', { collapsed }]">
+        <div class="logo-area">
+          <div class="logo-icon">
+            <n-icon size="32" color="#1e90ff">
+              <CloudOutline />
+            </n-icon>
+          </div>
+          <div v-if="!collapsed" class="logo-text">
+            <div class="site-name">Cloudflare Manager</div>
+            <div class="current-user">
+              <n-dropdown
+                :options="accountOptions"
+                @select="handleAccountChange"
+                trigger="click"
+              >
+                <n-button text size="small" style="padding: 0">
+                  <template #icon>
+                    <n-icon><PersonOutline /></n-icon>
+                  </template>
+                  {{ accountStore.currentAccount?.alias || '未选择账户' }}
+                  <n-icon style="margin-left: 4px"><ChevronDownOutline /></n-icon>
+                </n-button>
+              </n-dropdown>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <n-menu
-        :collapsed="collapsed"
-        :collapsed-width="64"
-        :collapsed-icon-size="22"
-        :options="menuOptions"
-        :value="activeKey"
-        @update:value="handleMenuSelect"
-      />
+      <!-- 全局功能菜单 -->
+      <div class="menu-section">
+        <div v-if="!collapsed" class="section-title">全局功能</div>
+        <n-menu
+          :collapsed="collapsed"
+          :collapsed-width="64"
+          :collapsed-icon-size="22"
+          :options="globalMenuOptions"
+          :value="activeKey"
+          @update:value="handleMenuSelect"
+        />
+      </div>
+
+      <!-- 域名管理区域 -->
+      <div v-if="zones.length > 0" class="menu-section">
+        <div v-if="!collapsed" class="section-title domain-section">
+          <div class="domain-title">
+            <span class="domain-name">{{ currentZone?.name || '选择域名' }}</span>
+            <n-dropdown
+              v-if="zones.length > 1"
+              :options="zoneOptions"
+              @select="handleZoneChange"
+              trigger="click"
+            >
+              <n-button
+                size="tiny"
+                text
+                class="zone-switch-btn"
+              >
+                <template #icon>
+                  <n-icon><ChevronDownOutline /></n-icon>
+                </template>
+              </n-button>
+            </n-dropdown>
+          </div>
+        </div>
+        <n-menu
+          :collapsed="collapsed"
+          :collapsed-width="64"
+          :collapsed-icon-size="22"
+          :options="zoneMenuOptions"
+          :value="activeKey"
+          @update:value="handleMenuSelect"
+        />
+      </div>
+      </div>
     </n-layout-sider>
 
     <n-layout>
       <n-layout-header bordered style="height: 64px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between">
-        <n-text style="font-size: 20px; font-weight: 500">{{ currentTitle }}</n-text>
+        <n-breadcrumb>
+          <n-breadcrumb-item>{{ currentTitle }}</n-breadcrumb-item>
+        </n-breadcrumb>
 
         <n-space align="center">
           <n-dropdown :options="themeOptions" @select="handleThemeSelect">
@@ -40,14 +103,7 @@
             </n-button>
           </n-dropdown>
 
-          <n-select
-            v-if="accountStore.accounts.length > 0"
-            :value="accountStore.currentAccount?.id"
-            :options="accountOptions"
-            style="width: 240px"
-            @update:value="handleAccountChange"
-          />
-          <n-button v-else type="primary" @click="showAccountModal = true">
+          <n-button v-if="accountStore.accounts.length === 0" type="primary" @click="showAccountModal = true">
             添加账户
           </n-button>
         </n-space>
@@ -59,8 +115,11 @@
     </n-layout>
 
     <!-- 添加账户弹窗 -->
-    <n-modal v-model:show="showAccountModal" preset="dialog" title="添加 Cloudflare 账户">
+    <n-modal v-model:show="showAccountModal" preset="dialog" title="添加 Cloudflare 账户" style="width: 500px">
       <n-form ref="formRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="100">
+        <n-alert type="info" style="margin-bottom: 16px">
+          使用 Global API Key 可以完整管理您的 Cloudflare 账户
+        </n-alert>
         <n-form-item label="邮箱" path="email">
           <n-input v-model:value="accountForm.email" placeholder="your@email.com" />
         </n-form-item>
@@ -83,32 +142,50 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NIcon } from 'naive-ui'
+import { useMessage, NIcon } from 'naive-ui'
 import type { MenuOption, DropdownOption } from 'naive-ui'
 import {
+  CloudOutline,
+  PersonOutline,
+  ChevronDownOutline,
   HomeOutline,
-  PeopleOutline,
   RocketOutline,
   SpeedometerOutline,
-  ServerOutline,
-  ShieldCheckmarkOutline,
   TimeOutline,
+  ServerOutline,
+  FolderOutline,
+  KeyOutline,
+  CodeSlashOutline,
+  GitNetworkOutline,
+  LockClosedOutline,
+  FlashOutline,
+  ShieldCheckmarkOutline,
+  StatsChartOutline,
+  DocumentTextOutline,
+  RibbonOutline,
   SunnyOutline,
   MoonOutline,
-  ContrastOutline
+  ContrastOutline,
+  GlobeOutline,
+  FileTrayFullOutline,
+  CloudUploadOutline
 } from '@vicons/ionicons5'
 import { useAccountStore } from '@/stores/account'
 import { useThemeStore } from '@/stores/theme'
+import { cloudflareApi, type Zone } from '@/api'
 
 const router = useRouter()
 const route = useRoute()
+const message = useMessage()
 const accountStore = useAccountStore()
 const themeStore = useThemeStore()
 
 const collapsed = ref(false)
 const showAccountModal = ref(false)
+const zones = ref<Zone[]>([])
+const currentZone = ref<Zone | null>(null)
 
 const accountForm = ref({
   email: '',
@@ -121,24 +198,20 @@ const formRules = {
   apiKey: { required: true, message: '请输入 API Key', trigger: 'blur' }
 }
 
-// 菜单配置
+// 菜单图标渲染
 function renderIcon(icon: any) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
-const menuOptions: MenuOption[] = [
+// 全局功能菜单
+const globalMenuOptions: MenuOption[] = [
   {
-    label: '控制台',
-    key: '/dashboard',
-    icon: renderIcon(HomeOutline)
+    label: '域名管理',
+    key: '/zones',
+    icon: renderIcon(GlobeOutline)
   },
   {
-    label: '多账户管理',
-    key: '/accounts',
-    icon: renderIcon(PeopleOutline)
-  },
-  {
-    label: '一键加速部署',
+    label: '一键加速',
     key: '/quick-deploy',
     icon: renderIcon(RocketOutline)
   },
@@ -148,29 +221,115 @@ const menuOptions: MenuOption[] = [
     icon: renderIcon(SpeedometerOutline)
   },
   {
-    label: 'DNS 记录管理',
-    key: '/dns',
-    icon: renderIcon(ServerOutline)
-  },
-  {
-    label: '防火墙规则',
-    key: '/firewall',
-    icon: renderIcon(ShieldCheckmarkOutline)
-  },
-  {
     label: '操作历史',
     key: '/history',
     icon: renderIcon(TimeOutline)
+  },
+  {
+    label: 'D1 数据库',
+    key: '/d1',
+    icon: renderIcon(FileTrayFullOutline),
+    disabled: true
+  },
+  {
+    label: 'R2 存储桶',
+    key: '/r2',
+    icon: renderIcon(CloudUploadOutline),
+    disabled: true
+  },
+  {
+    label: 'Workers KV',
+    key: '/workers-kv',
+    icon: renderIcon(KeyOutline),
+    disabled: true
+  },
+  {
+    label: 'Worker 模板库',
+    key: '/worker-templates',
+    icon: renderIcon(CodeSlashOutline),
+    disabled: true
+  },
+  {
+    label: 'Cloudflare Tunnels',
+    key: '/tunnels',
+    icon: renderIcon(GitNetworkOutline),
+    disabled: true
   }
 ]
+
+// 域名管理菜单（针对当前选中的域名）
+const zoneMenuOptions = computed<MenuOption[]>(() => {
+  if (!currentZone.value) return []
+
+  return [
+    {
+      label: 'DNS 记录',
+      key: '/dns',
+      icon: renderIcon(ServerOutline)
+    },
+    {
+      label: 'SSL/TLS',
+      key: '/ssl',
+      icon: renderIcon(LockClosedOutline),
+      disabled: true
+    },
+    {
+      label: '缓存管理',
+      key: '/cache',
+      icon: renderIcon(FlashOutline),
+      disabled: true
+    },
+    {
+      label: '防火墙',
+      key: '/firewall',
+      icon: renderIcon(ShieldCheckmarkOutline)
+    },
+    {
+      label: '统计分析',
+      key: '/analytics',
+      icon: renderIcon(StatsChartOutline),
+      disabled: true
+    },
+    {
+      label: '页面规则',
+      key: '/page-rules',
+      icon: renderIcon(DocumentTextOutline),
+      disabled: true
+    },
+    {
+      label: '证书管理',
+      key: '/certificates',
+      icon: renderIcon(RibbonOutline),
+      disabled: true
+    }
+  ]
+})
 
 const activeKey = computed(() => route.path)
 const currentTitle = computed(() => route.meta.title as string || '控制台')
 
-const accountOptions = computed(() =>
-  accountStore.accounts.map(acc => ({
+const accountOptions = computed<DropdownOption[]>(() => [
+  ...accountStore.accounts.map(acc => ({
     label: acc.alias,
-    value: acc.id
+    key: acc.id,
+    icon: renderIcon(PersonOutline)
+  })),
+  {
+    type: 'divider' as const,
+    key: 'divider'
+  },
+  {
+    label: '添加账户',
+    key: 'add-account',
+    icon: () => h(NIcon, null, { default: () => h('span', '+') })
+  }
+])
+
+const zoneOptions = computed<DropdownOption[]>(() =>
+  zones.value.map(zone => ({
+    label: zone.name,
+    key: zone.id,
+    icon: renderIcon(GlobeOutline)
   }))
 )
 
@@ -178,27 +337,60 @@ const themeOptions: DropdownOption[] = [
   {
     label: '亮色主题',
     key: 'light',
-    icon: () => h(NIcon, null, { default: () => h(SunnyOutline) })
+    icon: renderIcon(SunnyOutline)
   },
   {
     label: '暗色主题',
     key: 'dark',
-    icon: () => h(NIcon, null, { default: () => h(MoonOutline) })
+    icon: renderIcon(MoonOutline)
   },
   {
     label: '跟随系统',
     key: 'auto',
-    icon: () => h(NIcon, null, { default: () => h(ContrastOutline) })
+    icon: renderIcon(ContrastOutline)
   }
 ]
+
+// 加载域名列表
+async function loadZones() {
+  if (!accountStore.currentAccount) return
+
+  try {
+    zones.value = await cloudflareApi.getZones()
+    if (zones.value.length > 0 && !currentZone.value) {
+      currentZone.value = zones.value[0]
+    }
+  } catch (error) {
+    console.error('Failed to load zones:', error)
+  }
+}
 
 function handleMenuSelect(key: string) {
   router.push(key)
 }
 
-function handleAccountChange(accountId: string) {
-  accountStore.switchAccount(accountId)
-  window.location.reload() // 重新加载以更新所有数据
+function handleAccountChange(key: string) {
+  if (key === 'add-account') {
+    showAccountModal.value = true
+    return
+  }
+
+  accountStore.switchAccount(key)
+  zones.value = []
+  currentZone.value = null
+  loadZones()
+
+  // 如果当前在域名相关页面，跳转到域名管理
+  if (['/dns', '/ssl', '/cache', '/firewall', '/analytics', '/page-rules', '/certificates'].includes(route.path)) {
+    router.push('/zones')
+  }
+}
+
+function handleZoneChange(key: string) {
+  const zone = zones.value.find(z => z.id === key)
+  if (zone) {
+    currentZone.value = zone
+  }
 }
 
 function handleThemeSelect(key: string) {
@@ -211,21 +403,123 @@ function handleAddAccount() {
     accountStore.switchAccount(account.id)
     showAccountModal.value = false
     accountForm.value = { email: '', apiKey: '', alias: '' }
+    loadZones()
   }
 }
 
-// 如果没有账户,自动弹出添加窗口
-if (accountStore.accounts.length === 0) {
-  showAccountModal.value = true
-}
+// 初始化
+onMounted(() => {
+  if (accountStore.accounts.length === 0) {
+    showAccountModal.value = true
+  } else {
+    loadZones()
+  }
+})
 </script>
 
 <style scoped>
-.logo {
-  height: 64px;
+/* 侧边栏滚动容器 - 隐藏滚动条 */
+.sidebar-content {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* 隐藏滚动条 - Webkit 浏览器 (Chrome, Safari, Edge) */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 和 Edge */
+}
+
+.sidebar-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.header-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--n-border-color);
+  transition: all 0.3s;
+}
+
+.header-section.collapsed {
+  padding: 16px 8px;
+}
+
+.logo-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.logo-icon {
+  flex-shrink: 0;
+}
+
+.logo-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.site-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--n-text-color);
+  line-height: 1.4;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.current-user {
+  font-size: 12px;
+  color: var(--n-text-color-2);
+  line-height: 1.4;
+  overflow: hidden;
+}
+
+.menu-section {
+  margin-top: 16px;
+}
+
+.section-title {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--n-text-color-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid #efeff5;
+  justify-content: space-between;
+}
+
+.domain-section {
+  padding: 12px 16px;
+}
+
+.domain-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.domain-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--n-text-color);
+  text-transform: none;
+  letter-spacing: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.zone-switch-btn {
+  flex-shrink: 0;
+  padding: 0 !important;
+  min-width: 24px;
 }
 </style>

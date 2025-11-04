@@ -6,25 +6,19 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Layout',
     component: () => import('@/views/Layout.vue'),
-    redirect: '/dashboard',
+    redirect: '/zones',
     children: [
       {
-        path: '/dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue'),
-        meta: { title: '控制台' }
-      },
-      {
-        path: '/accounts',
-        name: 'Accounts',
-        component: () => import('@/views/Accounts.vue'),
-        meta: { title: '多账户管理' }
+        path: '/zones',
+        name: 'Zones',
+        component: () => import('@/views/Zones.vue'),
+        meta: { title: '域名管理' }
       },
       {
         path: '/quick-deploy',
         name: 'QuickDeploy',
         component: () => import('@/views/QuickDeploy.vue'),
-        meta: { title: '一键加速部署' }
+        meta: { title: '一键加速' }
       },
       {
         path: '/optimize',
@@ -33,22 +27,31 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '自动优化' }
       },
       {
+        path: '/history',
+        name: 'History',
+        component: () => import('@/views/History.vue'),
+        meta: { title: '操作历史' }
+      },
+      {
         path: '/dns',
         name: 'DNS',
         component: () => import('@/views/DNS.vue'),
-        meta: { title: 'DNS 记录管理' }
+        meta: { title: 'DNS 记录' }
       },
       {
         path: '/firewall',
         name: 'Firewall',
         component: () => import('@/views/Firewall.vue'),
-        meta: { title: '防火墙规则' }
+        meta: { title: '防火墙' }
+      },
+      // 原有的 Dashboard 和 Accounts 页面保留以兼容
+      {
+        path: '/dashboard',
+        redirect: '/zones'
       },
       {
-        path: '/history',
-        name: 'History',
-        component: () => import('@/views/History.vue'),
-        meta: { title: '操作历史' }
+        path: '/accounts',
+        redirect: '/zones'
       }
     ]
   }
