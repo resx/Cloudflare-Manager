@@ -17,7 +17,10 @@
             90 天（自动续期）
           </n-descriptions-item>
           <n-descriptions-item label="覆盖域名" :span="2">
-            *.{{ currentDomain }}, {{ currentDomain }}
+            <span v-if="currentZone">
+              *.{{ currentZone.name }}, {{ currentZone.name }}
+            </span>
+            <span v-else>请先在左侧菜单选择域名</span>
           </n-descriptions-item>
         </n-descriptions>
       </n-spin>
@@ -108,18 +111,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, inject, watch, type Ref } from 'vue'
 import { useMessage } from 'naive-ui'
+import { type Zone } from '@/api'
 
 const message = useMessage()
 const loading = ref(false)
 const showUploadModal = ref(false)
 
-const currentDomain = computed(() => {
-  return 'example.com'
-})
+// 从 Layout 获取当前域名
+const currentZone = inject<Ref<Zone | null>>('currentZone')
 
 onMounted(() => {
   // 加载证书信息
+})
+
+// 监听 currentZone 变化
+watch(() => currentZone?.value?.id, () => {
+  // 重新加载证书信息
 })
 </script>

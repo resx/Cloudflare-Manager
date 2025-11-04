@@ -95,12 +95,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, watch, type Ref } from 'vue'
 import { useMessage } from 'naive-ui'
+import { type Zone } from '@/api'
 
 const message = useMessage()
 const loading = ref(false)
 const showCreateModal = ref(false)
+
+// 从 Layout 获取当前域名
+const currentZone = inject<Ref<Zone | null>>('currentZone')
 
 const rules = ref<any[]>([])
 const ruleForm = ref({
@@ -109,6 +113,12 @@ const ruleForm = ref({
 })
 
 async function loadPageRules() {
+  if (!currentZone?.value?.id) {
+    console.log('No currentZone available for page rules')
+    return
+  }
+
+  console.log('Loading page rules for zone:', currentZone.value.name)
   loading.value = true
   try {
     // TODO: 调用 Cloudflare Page Rules API
@@ -134,6 +144,11 @@ function handleDelete(rule: any) {
 }
 
 onMounted(() => {
+  loadPageRules()
+})
+
+// 监听 currentZone 变化，自动重新加载页面规则
+watch(() => currentZone?.value?.id, () => {
   loadPageRules()
 })
 </script>

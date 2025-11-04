@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, inject, watch, type Ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -111,7 +111,7 @@ import {
   GridComponent
 } from 'echarts/components'
 import VChart from 'vue-echarts'
-import { cloudflareApi, type AnalyticsData } from '@/api'
+import { cloudflareApi, type AnalyticsData, type Zone } from '@/api'
 
 // 注册 ECharts 组件
 use([
@@ -126,12 +126,11 @@ use([
 const message = useMessage()
 const loading = ref(false)
 
+// 从 Layout 获取当前域名
+const currentZone = inject<Ref<Zone | null>>('currentZone')
+
 const timeRange = ref('24h')
 const analyticsData = ref<AnalyticsData | null>(null)
-
-const currentZoneId = computed(() => {
-  return localStorage.getItem('currentZoneId') || ''
-})
 
 const timeRangeOptions = [
   { label: '最近 24 小时', value: '24h' },
@@ -264,14 +263,15 @@ function formatNumber(num: number): string {
 }
 
 async function loadAnalytics() {
-  if (!currentZoneId.value) {
-    message.warning('请先选择域名')
+  if (!currentZone?.value?.id) {
+    console.log('No currentZone available for analytics')
     return
   }
 
+  console.log('Loading analytics for zone:', currentZone.value.name)
   loading.value = true
   try {
-    analyticsData.value = await cloudflareApi.getAnalytics(currentZoneId.value, timeRange.value)
+    analyticsData.value = await cloudflareApi.getAnalytics(currentZone.value.id, timeRange.value)
   } catch (error: any) {
     console.error('Failed to load analytics:', error)
     message.error(error?.response?.data?.error || '加载统计数据失败')
@@ -285,6 +285,11 @@ function handleTimeRangeChange() {
 }
 
 onMounted(() => {
+  loadAnalytics()
+})
+
+// 监听 currentZone 变化，自动重新加载分析数据
+watch(() => currentZone?.value?.id, () => {
   loadAnalytics()
 })
 </script>

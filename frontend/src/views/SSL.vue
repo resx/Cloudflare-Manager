@@ -130,13 +130,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, inject, type Ref } from 'vue'
 import { useMessage } from 'naive-ui'
-import { cloudflareApi } from '@/api'
+import { cloudflareApi, type Zone } from '@/api'
 import { useAccountStore } from '@/stores/account'
 
 const message = useMessage()
 const accountStore = useAccountStore()
+
+// 从 Layout 获取当前域名
+const currentZone = inject<Ref<Zone | null>>('currentZone')
 
 const loading = ref(false)
 const updating = ref(false)
@@ -155,12 +158,6 @@ const certInfo = ref({
   type: '',
   issuer: '',
   signature: ''
-})
-
-// 当前选中的 Zone ID（从 Layout 获取）
-const currentZoneId = computed(() => {
-  // TODO: 从 Layout 的 currentZone 获取
-  return localStorage.getItem('currentZoneId') || ''
 })
 
 // SSL 模式选项
@@ -190,14 +187,15 @@ function getSslModeDescription(mode: string): string {
 }
 
 async function loadSSLSettings() {
-  if (!currentZoneId.value) {
-    message.warning('请先选择域名')
+  if (!currentZone?.value?.id) {
+    console.log('No currentZone available for SSL settings')
     return
   }
 
+  console.log('Loading SSL settings for zone:', currentZone.value.name)
   loading.value = true
   try {
-    const settings = await cloudflareApi.getZoneSettings(currentZoneId.value)
+    const settings = await cloudflareApi.getZoneSettings(currentZone.value.id)
 
     // 解析设置
     settings.forEach((setting: any) => {
@@ -238,11 +236,14 @@ async function loadSSLSettings() {
 }
 
 async function updateSetting(id: string, value: any) {
-  if (!currentZoneId.value) return
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
 
   updating.value = true
   try {
-    await cloudflareApi.updateZoneSettings(currentZoneId.value, [{ id, value }])
+    await cloudflareApi.updateZoneSettings(currentZone.value.id, [{ id, value }])
     message.success('设置已更新')
   } catch (error: any) {
     message.error(error?.message || '更新设置失败')
@@ -278,6 +279,11 @@ function handleOpportunisticEncryptionChange(value: boolean) {
 }
 
 onMounted(() => {
+  loadSSLSettings()
+})
+
+// 监听 currentZone 变化，自动重新加载 SSL 设置
+watch(() => currentZone?.value?.id, () => {
   loadSSLSettings()
 })
 </script>

@@ -5,6 +5,10 @@
         通过 Cloudflare Worker 为您的网站提供全球加速服务,30 秒完成部署!
       </n-alert>
 
+      <n-alert v-if="!currentZone" type="warning" style="margin-bottom: 24px">
+        请先在左侧菜单选择一个域名
+      </n-alert>
+
       <n-form
         ref="formRef"
         :model="deployForm"
@@ -13,13 +17,8 @@
         label-width="120"
         require-mark-placement="left"
       >
-        <n-form-item label="选择域名" path="zoneId">
-          <n-select
-            v-model:value="deployForm.zoneId"
-            :options="zoneOptions"
-            placeholder="请选择要加速的域名"
-            :loading="loadingZones"
-          />
+        <n-form-item label="当前域名">
+          <n-input :value="currentZone?.name || '未选择'" disabled />
         </n-form-item>
 
         <n-form-item label="Worker 名称" path="scriptName">
@@ -119,20 +118,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, inject, type Ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import { cloudflareApi, type Zone } from '@/api'
-import { useAccountStore } from '@/stores/account'
 
-const accountStore = useAccountStore()
 const message = useMessage()
 
-const loadingZones = ref(false)
+// 从 Layout 获取当前域名
+const currentZone = inject<Ref<Zone | null>>('currentZone')
+
 const deploying = ref(false)
-const zones = ref<Zone[]>([])
 
 const deployForm = ref({
-  zoneId: '',
   scriptName: '',
   targetUrl: '',
   accessDomain: '',
@@ -142,7 +139,6 @@ const deployForm = ref({
 })
 
 const formRules = {
-  zoneId: { required: true, message: '请选择域名', trigger: 'change' },
   scriptName: { required: true, message: '请输入 Worker 名称', trigger: 'blur' },
   targetUrl: { required: true, message: '请输入目标网站', trigger: 'blur' },
   accessDomain: { required: true, message: '请输入访问域名', trigger: 'blur' },
@@ -150,32 +146,17 @@ const formRules = {
   authCode: { required: true, message: '请输入授权码', trigger: 'blur' }
 }
 
-const zoneOptions = computed(() =>
-  zones.value.map(zone => ({
-    label: zone.name,
-    value: zone.id
-  }))
-)
-
 const cdnNodeOptions = [
   { label: 'cdns.doon.eu.org (优选节点1)', value: 'cdns.doon.eu.org' },
   { label: 'cloudflare.182682.xyz (优选节点2)', value: 'cloudflare.182682.xyz' }
 ]
 
-async function loadZones() {
-  if (!accountStore.currentAccount) return
-
-  loadingZones.value = true
-  try {
-    zones.value = await cloudflareApi.getZones()
-  } catch (error) {
-    message.error('加载域名列表失败')
-  } finally {
-    loadingZones.value = false
-  }
-}
-
 async function handleDeploy() {
+  if (!currentZone?.value?.id) {
+    message.warning('请先在左侧菜单选择域名')
+    return
+  }
+
   // 验证授权码
   if (deployForm.value.authCode !== '1111') {
     message.error('授权码错误')
@@ -185,7 +166,7 @@ async function handleDeploy() {
   deploying.value = true
   try {
     const result = await cloudflareApi.deployWorker({
-      zone_id: deployForm.value.zoneId,
+      zone_id: currentZone.value.id,
       script_name: deployForm.value.scriptName,
       target_url: deployForm.value.targetUrl,
       access_domain: deployForm.value.accessDomain,
@@ -204,7 +185,6 @@ async function handleDeploy() {
 
 function handleReset() {
   deployForm.value = {
-    zoneId: '',
     scriptName: '',
     targetUrl: '',
     accessDomain: '',
@@ -213,8 +193,4 @@ function handleReset() {
     authCode: ''
   }
 }
-
-onMounted(() => {
-  loadZones()
-})
 </script>

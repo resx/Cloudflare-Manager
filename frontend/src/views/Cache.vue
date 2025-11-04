@@ -168,12 +168,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, inject, type Ref } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
-import { cloudflareApi } from '@/api'
+import { cloudflareApi, type Zone } from '@/api'
 
 const message = useMessage()
 const dialog = useDialog()
+
+// 从 Layout 获取当前域名
+const currentZone = inject<Ref<Zone | null>>('currentZone')
 
 const loading = ref(false)
 const updating = ref(false)
@@ -197,10 +200,6 @@ const cacheStats = ref({
   requests: 0,
   cached: 0,
   hitRate: 0
-})
-
-const currentZoneId = computed(() => {
-  return localStorage.getItem('currentZoneId') || ''
 })
 
 // 缓存级别选项
@@ -245,14 +244,15 @@ function formatNumber(num: number): string {
 }
 
 async function loadCacheSettings() {
-  if (!currentZoneId.value) {
-    message.warning('请先选择域名')
+  if (!currentZone?.value?.id) {
+    console.log('No currentZone available for cache settings')
     return
   }
 
+  console.log('Loading cache settings for zone:', currentZone.value.name)
   loading.value = true
   try {
-    const settings = await cloudflareApi.getZoneSettings(currentZoneId.value)
+    const settings = await cloudflareApi.getZoneSettings(currentZone.value.id)
 
     settings.forEach((setting: any) => {
       switch (setting.id) {
@@ -285,11 +285,14 @@ async function loadCacheSettings() {
 }
 
 async function updateSetting(id: string, value: any) {
-  if (!currentZoneId.value) return
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
 
   updating.value = true
   try {
-    await cloudflareApi.updateZoneSettings(currentZoneId.value, [{ id, value }])
+    await cloudflareApi.updateZoneSettings(currentZone.value.id, [{ id, value }])
     message.success('设置已更新')
   } catch (error: any) {
     message.error(error?.message || '更新设置失败')
@@ -401,6 +404,11 @@ async function handlePurgeByTag() {
 }
 
 onMounted(() => {
+  loadCacheSettings()
+})
+
+// 监听 currentZone 变化，自动重新加载缓存设置
+watch(() => currentZone?.value?.id, () => {
   loadCacheSettings()
 })
 </script>
