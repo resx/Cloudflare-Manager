@@ -1,0 +1,68 @@
+# 使用 docker:latest 镜像来执行此任务
+image: docker:latest
+
+services:
+  # 启动一个 Docker-in-Docker 服务
+  - docker:dind
+
+# 定义构建前的全局变量
+variables:
+  # Docker 构建优化
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  # 镜像命名规则（统一镜像）
+  APP_IMAGE: $CI_REGISTRY_IMAGE
+
+# 定义阶段
+stages:
+  - build
+
+# 全局 before_script - 登录到 GitLab Registry
+before_script:
+  - echo "Logging in to $CI_REGISTRY..."
+  - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+
+# 构建统一镜像（前端 + 后端 + nginx）
+build_image:
+  stage: build
+  script:
+    # 构建统一镜像
+    - echo "Building unified application image (frontend + backend + nginx)..."
+    - docker build -t $APP_IMAGE:$CI_COMMIT_SHA .
+    - docker tag $APP_IMAGE:$CI_COMMIT_SHA $APP_IMAGE:latest
+
+    # 如果是主分支，也打上 stable 标签
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
+        echo "Tagging as stable version..."
+        docker tag $APP_IMAGE:$CI_COMMIT_SHA $APP_IMAGE:stable
+      fi
+
+    # 推送镜像到 Registry
+    - echo "Pushing image to registry..."
+    - docker push $APP_IMAGE:$CI_COMMIT_SHA
+    - docker push $APP_IMAGE:latest
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
+        docker push $APP_IMAGE:stable
+      fi
+
+    # 显示镜像信息
+    - echo "Build completed successfully!"
+    - echo "Image tags:"
+    - echo "  - $APP_IMAGE:$CI_COMMIT_SHA"
+    - echo "  - $APP_IMAGE:latest"
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
+        echo "  - $APP_IMAGE:stable"
+      fi
+  tags:
+    - docker
+  only:
+    - main
+    - develop
+    - tags
+
+# 可选：清理旧的 Docker 镜像和容器
+after_script:
+  - docker system prune -f
