@@ -917,4 +917,139 @@ async function handleRequest(request) {{
         log::info!("Successfully fetched {} SSL certificates for zone {}", certificates.len(), zone_id);
         Ok(certificates)
     }
+
+    // 获取页面规则
+    pub async fn get_page_rules(&self, zone_id: &str) -> Result<Vec<PageRule>, String> {
+        let url = format!("{}/zones/{}/pagerules", CLOUDFLARE_API_BASE, zone_id);
+
+        log::info!("Fetching page rules for zone {}", zone_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let errors = json["errors"].as_array()
+                .and_then(|arr| arr.get(0))
+                .and_then(|err| err["message"].as_str())
+                .unwrap_or("Unknown error");
+            return Err(format!("API error ({}): {}", status, errors));
+        }
+
+        let rules: Vec<PageRule> = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse page rules: {}", e))?;
+
+        log::info!("Successfully fetched {} page rules for zone {}", rules.len(), zone_id);
+        Ok(rules)
+    }
+
+    // 创建页面规则
+    pub async fn create_page_rule(&self, zone_id: &str, rule: &PageRule) -> Result<PageRule, String> {
+        let url = format!("{}/zones/{}/pagerules", CLOUDFLARE_API_BASE, zone_id);
+
+        log::info!("Creating page rule for zone {}", zone_id);
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(rule)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let errors = json["errors"].as_array()
+                .and_then(|arr| arr.get(0))
+                .and_then(|err| err["message"].as_str())
+                .unwrap_or("Unknown error");
+            return Err(format!("API error ({}): {}", status, errors));
+        }
+
+        let created_rule: PageRule = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse page rule: {}", e))?;
+
+        log::info!("Successfully created page rule for zone {}", zone_id);
+        Ok(created_rule)
+    }
+
+    // 更新页面规则
+    pub async fn update_page_rule(&self, zone_id: &str, rule_id: &str, rule: &PageRule) -> Result<PageRule, String> {
+        let url = format!("{}/zones/{}/pagerules/{}", CLOUDFLARE_API_BASE, zone_id, rule_id);
+
+        log::info!("Updating page rule {} for zone {}", rule_id, zone_id);
+
+        let response = self.client
+            .patch(&url)
+            .headers(self.get_headers())
+            .json(rule)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let errors = json["errors"].as_array()
+                .and_then(|arr| arr.get(0))
+                .and_then(|err| err["message"].as_str())
+                .unwrap_or("Unknown error");
+            return Err(format!("API error ({}): {}", status, errors));
+        }
+
+        let updated_rule: PageRule = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse page rule: {}", e))?;
+
+        log::info!("Successfully updated page rule {} for zone {}", rule_id, zone_id);
+        Ok(updated_rule)
+    }
+
+    // 删除页面规则
+    pub async fn delete_page_rule(&self, zone_id: &str, rule_id: &str) -> Result<String, String> {
+        let url = format!("{}/zones/{}/pagerules/{}", CLOUDFLARE_API_BASE, zone_id, rule_id);
+
+        log::info!("Deleting page rule {} for zone {}", rule_id, zone_id);
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let errors = json["errors"].as_array()
+                .and_then(|arr| arr.get(0))
+                .and_then(|err| err["message"].as_str())
+                .unwrap_or("Unknown error");
+            return Err(format!("API error ({}): {}", status, errors));
+        }
+
+        log::info!("Successfully deleted page rule {} for zone {}", rule_id, zone_id);
+        Ok(rule_id.to_string())
+    }
 }

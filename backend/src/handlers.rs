@@ -255,3 +255,55 @@ pub async fn get_ssl_certificates(req: web::Json<CloudflareRequest<GetSslCertifi
         Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
     }
 }
+
+// 获取页面规则
+pub async fn get_page_rules(req: web::Json<CloudflareRequest<GetPageRulesRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_page_rules(&req.data.zone_id).await {
+        Ok(rules) => HttpResponse::Ok().json(ApiResponse::success(rules)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 创建页面规则
+pub async fn create_page_rule(req: web::Json<CloudflareRequest<CreatePageRuleRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.create_page_rule(&req.data.zone_id, &req.data.rule).await {
+        Ok(rule) => HttpResponse::Ok().json(ApiResponse::success(rule)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 更新页面规则
+pub async fn update_page_rule(req: web::Json<CloudflareRequest<UpdatePageRuleRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.update_page_rule(&req.data.zone_id, &req.data.rule_id, &req.data.rule).await {
+        Ok(rule) => HttpResponse::Ok().json(ApiResponse::success(rule)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 删除页面规则
+pub async fn delete_page_rule(req: web::Json<CloudflareRequest<DeletePageRuleRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.delete_page_rule(&req.data.zone_id, &req.data.rule_id).await {
+        Ok(id) => HttpResponse::Ok().json(ApiResponse::success(id)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}

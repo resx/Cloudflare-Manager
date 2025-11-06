@@ -2,9 +2,14 @@
   <n-space vertical :size="24">
     <n-card title="DNS 记录管理">
       <template #header-extra>
-        <n-button type="primary" @click="showAddModal = true">
-          添加记录
-        </n-button>
+        <n-space>
+          <n-button @click="showBatchImportModal = true">
+            批量导入
+          </n-button>
+          <n-button type="primary" @click="showAddModal = true">
+            添加记录
+          </n-button>
+        </n-space>
       </template>
 
       <n-spin :show="loadingRecords">
@@ -16,6 +21,83 @@
         />
       </n-spin>
     </n-card>
+
+    <!-- 批量导入弹窗 -->
+    <n-modal v-model:show="showBatchImportModal" preset="card" title="批量导入 DNS 记录" style="width: 800px">
+      <n-space vertical :size="16">
+        <n-alert type="info">
+          <template #header>导入格式说明</template>
+          支持 CSV 格式，每行一条记录。格式：类型,名称,内容,TTL,是否代理,优先级<br/>
+          示例：<br/>
+          <n-code :code="csvExample" language="csv" style="margin-top: 8px" />
+        </n-alert>
+
+        <n-form-item label="导入方式">
+          <n-radio-group v-model:value="importMethod">
+            <n-space>
+              <n-radio value="paste">粘贴文本</n-radio>
+              <n-radio value="file">上传文件</n-radio>
+            </n-space>
+          </n-radio-group>
+        </n-form-item>
+
+        <n-form-item v-if="importMethod === 'paste'" label="CSV 数据">
+          <n-input
+            v-model:value="batchImportText"
+            type="textarea"
+            placeholder="粘贴 CSV 数据，每行一条记录"
+            :rows="10"
+          />
+        </n-form-item>
+
+        <n-form-item v-if="importMethod === 'file'" label="选择文件">
+          <n-upload
+            :max="1"
+            accept=".csv,.txt"
+            :on-change="handleFileUpload"
+            :show-file-list="false"
+          >
+            <n-button>选择 CSV 文件</n-button>
+          </n-upload>
+          <n-text v-if="uploadedFileName" depth="3" style="margin-left: 8px">
+            已选择: {{ uploadedFileName }}
+          </n-text>
+        </n-form-item>
+
+        <n-alert v-if="parseErrors.length > 0" type="error" title="解析错误">
+          <ul style="margin: 0; padding-left: 20px">
+            <li v-for="(error, index) in parseErrors" :key="index">{{ error }}</li>
+          </ul>
+        </n-alert>
+
+        <n-alert v-if="parsedRecords.length > 0" type="success" :title="`已解析 ${parsedRecords.length} 条记录`">
+          <n-data-table
+            :columns="previewColumns"
+            :data="parsedRecords"
+            :pagination="false"
+            max-height="300"
+            size="small"
+          />
+        </n-alert>
+      </n-space>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="handleCancelBatchImport">取消</n-button>
+          <n-button @click="handleParseBatchImport" :disabled="!batchImportText">
+            解析
+          </n-button>
+          <n-button
+            type="primary"
+            :loading="batchImporting"
+            :disabled="parsedRecords.length === 0"
+            @click="handleConfirmBatchImport"
+          >
+            导入 {{ parsedRecords.length }} 条记录
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
 
     <!-- 添加 DNS 记录弹窗 -->
     <n-modal v-model:show="showAddModal" preset="dialog" title="添加 DNS 记录" style="width: 600px">
@@ -150,6 +232,29 @@ const loadingRecords = ref(false)
 const submitting = ref(false)
 const showAddModal = ref(false)
 const showEditModal = ref(false)
+
+// 批量导入相关
+const showBatchImportModal = ref(false)
+const batchImporting = ref(false)
+const batchImportText = ref('')
+const importMethod = ref('paste')
+const uploadedFileName = ref('')
+const parsedRecords = ref<DnsRecord[]>([])
+const parseErrors = ref<string[]>([])
+
+const csvExample = `A,www,192.168.1.1,3600,true
+AAAA,www,2001:db8::1,3600,true
+CNAME,blog,example.com,1,false
+MX,@,mail.example.com,3600,false,10
+TXT,@,"v=spf1 include:_spf.example.com ~all",1,false`
+
+const previewColumns = [
+  { title: '类型', key: 'type', width: 80 },
+  { title: '名称', key: 'name', width: 120 },
+  { title: '内容', key: 'content', ellipsis: { tooltip: true } },
+  { title: 'TTL', key: 'ttl', width: 80 },
+  { title: '代理', key: 'proxied', width: 60, render: (row: any) => row.proxied ? '是' : '否' }
+]
 
 const dnsRecords = ref<DnsRecord[]>([])
 
@@ -408,6 +513,155 @@ async function handleDelete(record: DnsRecord) {
   } catch (error: any) {
     message.error(error?.message || '删除失败')
   }
+}
+
+// 批量导入相关函数
+function handleFileUpload(options: any) {
+  const file = options.file.file
+  if (file) {
+    uploadedFileName.value = file.name
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      batchImportText.value = e.target?.result as string
+    }
+    reader.readAsText(file)
+  }
+}
+
+function handleParseBatchImport() {
+  parseErrors.value = []
+  parsedRecords.value = []
+
+  if (!batchImportText.value.trim()) {
+    parseErrors.value.push('请输入要导入的数据')
+    return
+  }
+
+  const lines = batchImportText.value.trim().split('\n')
+
+  lines.forEach((line, index) => {
+    const lineNum = index + 1
+    line = line.trim()
+
+    if (!line || line.startsWith('#')) {
+      return // 跳过空行和注释行
+    }
+
+    try {
+      // 处理CSV格式：类型,名称,内容,TTL,是否代理,优先级
+      const parts = line.split(',').map(p => p.trim())
+
+      if (parts.length < 3) {
+        parseErrors.value.push(`第 ${lineNum} 行: 格式不正确，至少需要类型、名称和内容`)
+        return
+      }
+
+      const recordType = parts[0].toUpperCase()
+      const name = parts[1]
+      let content = parts[2]
+      const ttl = parts[3] ? parseInt(parts[3]) : 1
+      const proxied = parts[4] === 'true' || parts[4] === '1'
+      const priority = parts[5] ? parseInt(parts[5]) : undefined
+
+      // 处理TXT记录的引号
+      if (recordType === 'TXT') {
+        // 移除外部引号（如果有）
+        if (content.startsWith('"') && content.endsWith('"')) {
+          content = content.slice(1, -1)
+        }
+        // 确保有引号
+        if (!content.startsWith('"')) {
+          content = `"${content}"`
+        }
+      }
+
+      // 验证记录类型
+      const validTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'SRV', 'NS', 'CAA', 'PTR']
+      if (!validTypes.includes(recordType)) {
+        parseErrors.value.push(`第 ${lineNum} 行: 不支持的记录类型 "${recordType}"`)
+        return
+      }
+
+      const record: DnsRecord = {
+        type: recordType,
+        name: name,
+        content: content,
+        ttl: ttl,
+        proxied: proxied
+      }
+
+      if (priority !== undefined && (recordType === 'MX' || recordType === 'SRV')) {
+        record.priority = priority
+      }
+
+      parsedRecords.value.push(record)
+    } catch (error: any) {
+      parseErrors.value.push(`第 ${lineNum} 行: 解析失败 - ${error.message}`)
+    }
+  })
+
+  if (parsedRecords.value.length === 0 && parseErrors.value.length === 0) {
+    parseErrors.value.push('没有找到有效的 DNS 记录')
+  }
+}
+
+async function handleConfirmBatchImport() {
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
+
+  if (parsedRecords.value.length === 0) {
+    message.warning('没有要导入的记录')
+    return
+  }
+
+  batchImporting.value = true
+  let successCount = 0
+  let failCount = 0
+  const errors: string[] = []
+
+  try {
+    for (const record of parsedRecords.value) {
+      try {
+        const recordWithZone = { ...record, zone_id: currentZone.value.id }
+        await cloudflareApi.createDnsRecord(recordWithZone)
+        successCount++
+      } catch (error: any) {
+        failCount++
+        errors.push(`${record.name} (${record.type}): ${error.message || '导入失败'}`)
+      }
+    }
+
+    if (successCount > 0) {
+      message.success(`成功导入 ${successCount} 条记录${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
+      await loadDnsRecords()
+    }
+
+    if (failCount > 0 && errors.length > 0) {
+      console.error('批量导入错误:', errors)
+      if (failCount === parsedRecords.value.length) {
+        message.error(`所有记录导入失败，请检查格式和权限`)
+      }
+    }
+
+    if (successCount > 0) {
+      handleCancelBatchImport()
+    }
+  } catch (error: any) {
+    message.error(error?.message || '批量导入失败')
+  } finally {
+    batchImporting.value = false
+  }
+}
+
+function handleCancelBatchImport() {
+  showBatchImportModal.value = false
+  batchImportText.value = ''
+  uploadedFileName.value = ''
+  parsedRecords.value = []
+  parseErrors.value = []
+  importMethod.value = 'paste'
 }
 
 onMounted(() => {

@@ -278,6 +278,67 @@ pub struct PurgeCacheResponse {
     pub id: String,
 }
 
+// 页面规则相关
+#[derive(Debug, Deserialize)]
+pub struct GetPageRulesRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PageRule {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    pub targets: Vec<PageRuleTarget>,
+    pub actions: Vec<PageRuleAction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub priority: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PageRuleTarget {
+    pub target: String,  // "url"
+    pub constraint: PageRuleConstraint,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PageRuleConstraint {
+    pub operator: String,  // "matches"
+    pub value: String,  // URL pattern
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PageRuleAction {
+    pub id: String,
+    pub value: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreatePageRuleRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    pub rule: PageRule,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdatePageRuleRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "ruleId")]
+    pub rule_id: String,
+    pub rule: PageRule,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeletePageRuleRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "ruleId")]
+    pub rule_id: String,
+}
+
 // SSL 证书相关
 #[derive(Debug, Deserialize)]
 pub struct GetSslCertificatesRequest {

@@ -2,6 +2,7 @@
 /backend/target/
 /backend/**/*.rs.bk
 /backend/.env
+/backend/Cargo.lock
 
 # Node
 /frontend/node_modules/
@@ -26,5 +27,14 @@ Thumbs.db
 *.swo
 *~
 
-# Docker
-.dockerignore
+# Claude Code
+.claude/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Docker volumes
+docker-data/

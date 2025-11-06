@@ -81,6 +81,10 @@ async fn main() -> std::io::Result<()> {
                     .route("/analytics", web::post().to(handlers::get_analytics))
                     .route("/cache/purge", web::post().to(handlers::purge_cache))
                     .route("/ssl/certificates", web::post().to(handlers::get_ssl_certificates))
+                    .route("/pagerules", web::post().to(handlers::get_page_rules))
+                    .route("/pagerules/create", web::post().to(handlers::create_page_rule))
+                    .route("/pagerules/update", web::post().to(handlers::update_page_rule))
+                    .route("/pagerules/delete", web::post().to(handlers::delete_page_rule))
             )
     })
     .bind(&bind_addr)?

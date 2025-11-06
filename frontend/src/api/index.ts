@@ -174,6 +174,30 @@ export interface CertificateDetail {
   uploaded_on: string
 }
 
+// 页面规则相关
+export interface PageRule {
+  id?: string
+  targets: PageRuleTarget[]
+  actions: PageRuleAction[]
+  priority?: number
+  status?: string
+}
+
+export interface PageRuleTarget {
+  target: string  // "url"
+  constraint: PageRuleConstraint
+}
+
+export interface PageRuleConstraint {
+  operator: string  // "matches"
+  value: string  // URL pattern
+}
+
+export interface PageRuleAction {
+  id: string
+  value: any
+}
+
 export const cloudflareApi = {
   // Zone 相关
   async getZones(): Promise<Zone[]> {
@@ -284,6 +308,37 @@ export const cloudflareApi = {
   async getSslCertificates(zoneId: string): Promise<SslCertificate[]> {
     const res = await api.post('/cloudflare/ssl/certificates', { zone_id: zoneId })
     return res.data || []
+  },
+
+  // 页面规则
+  async getPageRules(zoneId: string): Promise<PageRule[]> {
+    const res = await api.post('/cloudflare/pagerules', { zone_id: zoneId })
+    return res.data || []
+  },
+
+  async createPageRule(zoneId: string, rule: PageRule): Promise<PageRule> {
+    const res = await api.post('/cloudflare/pagerules/create', {
+      zone_id: zoneId,
+      rule
+    })
+    return res.data
+  },
+
+  async updatePageRule(zoneId: string, ruleId: string, rule: PageRule): Promise<PageRule> {
+    const res = await api.post('/cloudflare/pagerules/update', {
+      zone_id: zoneId,
+      rule_id: ruleId,
+      rule
+    })
+    return res.data
+  },
+
+  async deletePageRule(zoneId: string, ruleId: string): Promise<string> {
+    const res = await api.post('/cloudflare/pagerules/delete', {
+      zone_id: zoneId,
+      rule_id: ruleId
+    })
+    return res.data
   }
 }
 
