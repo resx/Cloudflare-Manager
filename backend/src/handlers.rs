@@ -175,7 +175,80 @@ pub async fn deploy_worker(req: web::Json<CloudflareRequest<DeployWorkerRequest>
 
 // 列出 Workers
 pub async fn list_workers(req: web::Json<CloudflareRequest<ListWorkersRequest>>) -> impl Responder {
-    HttpResponse::Ok().json(ApiResponse::success(Vec::<String>::new()))
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.list_workers(&req.data.account_id).await {
+        Ok(workers) => HttpResponse::Ok().json(ApiResponse::success(workers)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 获取单个 Worker
+pub async fn get_worker(req: web::Json<CloudflareRequest<GetWorkerRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_worker(&req.data.account_id, &req.data.script_name).await {
+        Ok(script) => HttpResponse::Ok().json(ApiResponse::success(script)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 删除 Worker
+pub async fn delete_worker(req: web::Json<CloudflareRequest<DeleteWorkerRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.delete_worker(&req.data.account_id, &req.data.script_name).await {
+        Ok(message) => HttpResponse::Ok().json(ApiResponse::success(message)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 获取 Worker 路由列表
+pub async fn get_worker_routes(req: web::Json<CloudflareRequest<GetWorkerRoutesRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_worker_routes(&req.data.zone_id).await {
+        Ok(routes) => HttpResponse::Ok().json(ApiResponse::success(routes)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 创建 Worker 路由
+pub async fn create_worker_route(req: web::Json<CloudflareRequest<CreateWorkerRouteRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.create_worker_route(&req.data.zone_id, &req.data.pattern, &req.data.script_name).await {
+        Ok(route) => HttpResponse::Ok().json(ApiResponse::success(route)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 删除 Worker 路由
+pub async fn delete_worker_route(req: web::Json<CloudflareRequest<DeleteWorkerRouteRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.delete_worker_route(&req.data.zone_id, &req.data.route_id).await {
+        Ok(message) => HttpResponse::Ok().json(ApiResponse::success(message)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
 }
 
 // 获取 Zone 设置
@@ -252,6 +325,50 @@ pub async fn get_ssl_certificates(req: web::Json<CloudflareRequest<GetSslCertifi
 
     match client.get_ssl_certificates(&req.data.zone_id).await {
         Ok(certificates) => HttpResponse::Ok().json(ApiResponse::success(certificates)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 获取自定义 SSL 证书列表
+pub async fn get_custom_certificates(req: web::Json<CloudflareRequest<GetCustomCertificatesRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_custom_certificates(&req.data.zone_id).await {
+        Ok(certificates) => HttpResponse::Ok().json(ApiResponse::success(certificates)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 上传自定义 SSL 证书
+pub async fn upload_custom_certificate(req: web::Json<CloudflareRequest<UploadCustomCertificateRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.upload_custom_certificate(
+        &req.data.zone_id,
+        &req.data.certificate,
+        &req.data.private_key,
+        req.data.bundle_method.as_deref(),
+    ).await {
+        Ok(certificate) => HttpResponse::Ok().json(ApiResponse::success(certificate)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 删除自定义 SSL 证书
+pub async fn delete_custom_certificate(req: web::Json<CloudflareRequest<DeleteCustomCertificateRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.delete_custom_certificate(&req.data.zone_id, &req.data.certificate_id).await {
+        Ok(message) => HttpResponse::Ok().json(ApiResponse::success(message)),
         Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
     }
 }

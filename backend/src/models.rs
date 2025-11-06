@@ -153,8 +153,66 @@ pub struct DeployWorkerRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct ListWorkersRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Worker {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub etag: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_on: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified_on: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetWorkerRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "scriptName")]
+    pub script_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteWorkerRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "scriptName")]
+    pub script_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetWorkerRoutesRequest {
     #[serde(alias = "zoneId")]
     pub zone_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WorkerRoute {
+    pub id: String,
+    pub pattern: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub script: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateWorkerRouteRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    pub pattern: String,
+    #[serde(alias = "scriptName")]
+    pub script_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteWorkerRouteRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "routeId")]
+    pub route_id: String,
 }
 
 // Zone 设置
@@ -369,6 +427,45 @@ pub struct CertificateDetail {
     pub serial_number: String,
     pub expires_on: String,
     pub uploaded_on: String,
+}
+
+// 自定义 SSL 证书管理
+#[derive(Debug, Deserialize)]
+pub struct UploadCustomCertificateRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    pub certificate: String,  // PEM format
+    pub private_key: String,  // PEM format
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bundle_method: Option<String>,  // ubiquitous, optimal, force
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetCustomCertificatesRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CustomCertificate {
+    pub id: String,
+    pub status: String,
+    pub issuer: String,
+    pub signature: String,
+    pub expires_on: String,
+    pub uploaded_on: String,
+    pub modified_on: String,
+    pub hosts: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bundle_method: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteCustomCertificateRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "certificateId")]
+    pub certificate_id: String,
 }
 
 // API 响应

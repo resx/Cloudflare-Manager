@@ -88,6 +88,19 @@ export interface DeployWorkerRequest {
   cdn_node: string
 }
 
+export interface Worker {
+  id: string
+  etag?: string
+  created_on?: string
+  modified_on?: string
+}
+
+export interface WorkerRoute {
+  id: string
+  pattern: string
+  script?: string
+}
+
 export interface ZoneSetting {
   id: string
   value: any
@@ -172,6 +185,26 @@ export interface CertificateDetail {
   serial_number: string
   expires_on: string
   uploaded_on: string
+}
+
+// 自定义 SSL 证书相关
+export interface CustomCertificate {
+  id: string
+  status: string
+  issuer: string
+  signature: string
+  expires_on: string
+  uploaded_on: string
+  modified_on: string
+  hosts: string[]
+  bundle_method?: string
+}
+
+export interface UploadCustomCertificateRequest {
+  zone_id: string
+  certificate: string  // PEM format
+  private_key: string  // PEM format
+  bundle_method?: string  // ubiquitous, optimal, force
 }
 
 // 页面规则相关
@@ -266,6 +299,55 @@ export const cloudflareApi = {
     return res.data
   },
 
+  // 获取 Worker 列表
+  async listWorkers(accountId: string): Promise<Worker[]> {
+    const res = await api.post('/cloudflare/workers/list', { account_id: accountId })
+    return res.data || []
+  },
+
+  // 获取单个 Worker
+  async getWorker(accountId: string, scriptName: string): Promise<string> {
+    const res = await api.post('/cloudflare/workers/get', {
+      account_id: accountId,
+      script_name: scriptName
+    })
+    return res.data
+  },
+
+  // 删除 Worker
+  async deleteWorker(accountId: string, scriptName: string): Promise<string> {
+    const res = await api.post('/cloudflare/workers/delete', {
+      account_id: accountId,
+      script_name: scriptName
+    })
+    return res.data
+  },
+
+  // 获取 Worker 路由列表
+  async getWorkerRoutes(zoneId: string): Promise<WorkerRoute[]> {
+    const res = await api.post('/cloudflare/workers/routes', { zone_id: zoneId })
+    return res.data || []
+  },
+
+  // 创建 Worker 路由
+  async createWorkerRoute(zoneId: string, pattern: string, scriptName: string): Promise<WorkerRoute> {
+    const res = await api.post('/cloudflare/workers/routes/create', {
+      zone_id: zoneId,
+      pattern: pattern,
+      script_name: scriptName
+    })
+    return res.data
+  },
+
+  // 删除 Worker 路由
+  async deleteWorkerRoute(zoneId: string, routeId: string): Promise<string> {
+    const res = await api.post('/cloudflare/workers/routes/delete', {
+      zone_id: zoneId,
+      route_id: routeId
+    })
+    return res.data
+  },
+
   // Zone 设置
   async getZoneSettings(zoneId: string): Promise<ZoneSetting[]> {
     const res = await api.post('/cloudflare/zone/settings', { zone_id: zoneId })
@@ -308,6 +390,25 @@ export const cloudflareApi = {
   async getSslCertificates(zoneId: string): Promise<SslCertificate[]> {
     const res = await api.post('/cloudflare/ssl/certificates', { zone_id: zoneId })
     return res.data || []
+  },
+
+  // 自定义 SSL 证书
+  async getCustomCertificates(zoneId: string): Promise<CustomCertificate[]> {
+    const res = await api.post('/cloudflare/ssl/custom', { zone_id: zoneId })
+    return res.data || []
+  },
+
+  async uploadCustomCertificate(request: UploadCustomCertificateRequest): Promise<CustomCertificate> {
+    const res = await api.post('/cloudflare/ssl/custom/upload', request)
+    return res.data
+  },
+
+  async deleteCustomCertificate(zoneId: string, certificateId: string): Promise<string> {
+    const res = await api.post('/cloudflare/ssl/custom/delete', {
+      zone_id: zoneId,
+      certificate_id: certificateId
+    })
+    return res.data
   },
 
   // 页面规则

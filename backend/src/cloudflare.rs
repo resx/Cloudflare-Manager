@@ -273,6 +273,172 @@ async function handleRequest(request) {{
         )
     }
 
+    // 获取 Worker 列表
+    pub async fn list_workers(&self, account_id: &str) -> Result<Vec<Worker>, String> {
+        let url = format!("{}/accounts/{}/workers/scripts", CLOUDFLARE_API_BASE, account_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let workers: Vec<Worker> = json["result"]
+            .as_array()
+            .ok_or("Invalid result format")?
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap_or(Worker {
+                id: v["id"].as_str().unwrap_or("").to_string(),
+                etag: v["etag"].as_str().map(|s| s.to_string()),
+                created_on: v["created_on"].as_str().map(|s| s.to_string()),
+                modified_on: v["modified_on"].as_str().map(|s| s.to_string()),
+            }))
+            .collect();
+
+        Ok(workers)
+    }
+
+    // 获取单个 Worker
+    pub async fn get_worker(&self, account_id: &str, script_name: &str) -> Result<String, String> {
+        let url = format!("{}/accounts/{}/workers/scripts/{}", CLOUDFLARE_API_BASE, account_id, script_name);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let script = response
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read script: {}", e))?;
+
+        Ok(script)
+    }
+
+    // 删除 Worker
+    pub async fn delete_worker(&self, account_id: &str, script_name: &str) -> Result<String, String> {
+        let url = format!("{}/accounts/{}/workers/scripts/{}", CLOUDFLARE_API_BASE, account_id, script_name);
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        Ok(format!("Worker {} deleted successfully", script_name))
+    }
+
+    // 获取 Worker 路由列表
+    pub async fn get_worker_routes(&self, zone_id: &str) -> Result<Vec<WorkerRoute>, String> {
+        let url = format!("{}/zones/{}/workers/routes", CLOUDFLARE_API_BASE, zone_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let routes: Vec<WorkerRoute> = json["result"]
+            .as_array()
+            .ok_or("Invalid result format")?
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap_or(WorkerRoute {
+                id: v["id"].as_str().unwrap_or("").to_string(),
+                pattern: v["pattern"].as_str().unwrap_or("").to_string(),
+                script: v["script"].as_str().map(|s| s.to_string()),
+            }))
+            .collect();
+
+        Ok(routes)
+    }
+
+    // 创建 Worker 路由
+    pub async fn create_worker_route(&self, zone_id: &str, pattern: &str, script_name: &str) -> Result<WorkerRoute, String> {
+        let url = format!("{}/zones/{}/workers/routes", CLOUDFLARE_API_BASE, zone_id);
+
+        let body = serde_json::json!({
+            "pattern": pattern,
+            "script": script_name
+        });
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let route: WorkerRoute = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse route: {}", e))?;
+
+        Ok(route)
+    }
+
+    // 删除 Worker 路由
+    pub async fn delete_worker_route(&self, zone_id: &str, route_id: &str) -> Result<String, String> {
+        let url = format!("{}/zones/{}/workers/routes/{}", CLOUDFLARE_API_BASE, zone_id, route_id);
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        Ok("Route deleted successfully".to_string())
+    }
+
     // 获取 Zone 设置
     pub async fn get_zone_settings(&self, zone_id: &str) -> Result<Vec<ZoneSetting>, String> {
         let url = format!("{}/zones/{}/settings", CLOUDFLARE_API_BASE, zone_id);
@@ -916,6 +1082,104 @@ async function handleRequest(request) {{
 
         log::info!("Successfully fetched {} SSL certificates for zone {}", certificates.len(), zone_id);
         Ok(certificates)
+    }
+
+    // 获取自定义 SSL 证书列表
+    pub async fn get_custom_certificates(&self, zone_id: &str) -> Result<Vec<CustomCertificate>, String> {
+        let url = format!("{}/zones/{}/custom_certificates", CLOUDFLARE_API_BASE, zone_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let certificates: Vec<CustomCertificate> = json["result"]
+            .as_array()
+            .ok_or("Invalid result format")?
+            .iter()
+            .filter_map(|v| serde_json::from_value(v.clone()).ok())
+            .collect();
+
+        Ok(certificates)
+    }
+
+    // 上传自定义 SSL 证书
+    pub async fn upload_custom_certificate(
+        &self,
+        zone_id: &str,
+        certificate: &str,
+        private_key: &str,
+        bundle_method: Option<&str>,
+    ) -> Result<CustomCertificate, String> {
+        let url = format!("{}/zones/{}/custom_certificates", CLOUDFLARE_API_BASE, zone_id);
+
+        let mut body = serde_json::json!({
+            "certificate": certificate,
+            "private_key": private_key
+        });
+
+        if let Some(method) = bundle_method {
+            body["bundle_method"] = serde_json::Value::String(method.to_string());
+        }
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let certificate: CustomCertificate = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse certificate: {}", e))?;
+
+        Ok(certificate)
+    }
+
+    // 删除自定义 SSL 证书
+    pub async fn delete_custom_certificate(&self, zone_id: &str, certificate_id: &str) -> Result<String, String> {
+        let url = format!(
+            "{}/zones/{}/custom_certificates/{}",
+            CLOUDFLARE_API_BASE, zone_id, certificate_id
+        );
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        Ok("Certificate deleted successfully".to_string())
     }
 
     // 获取页面规则

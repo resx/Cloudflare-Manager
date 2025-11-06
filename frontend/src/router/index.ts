@@ -21,6 +21,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '一键加速' }
       },
       {
+        path: '/workers',
+        name: 'Workers',
+        component: () => import('@/views/Workers.vue'),
+        meta: { title: 'Workers 管理' }
+      },
+      {
         path: '/optimize',
         name: 'Optimize',
         component: () => import('@/views/Optimize.vue'),

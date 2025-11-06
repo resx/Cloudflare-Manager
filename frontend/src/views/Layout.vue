@@ -257,6 +257,11 @@ const globalMenuOptions: MenuOption[] = [
     icon: renderIcon(RocketOutline)
   },
   {
+    label: 'Workers 管理',
+    key: '/workers',
+    icon: renderIcon(CodeSlashOutline)
+  },
+  {
     label: '自动优化',
     key: '/optimize',
     icon: renderIcon(SpeedometerOutline)
