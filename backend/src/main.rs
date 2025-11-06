@@ -55,8 +55,13 @@ async fn main() -> std::io::Result<()> {
             .limit(4096)
             .error_handler(json_error_handler);
 
+        // Payload 配置 - 设置更大的限制以支持 String 提取
+        let payload_cfg = web::PayloadConfig::default()
+            .limit(1024 * 1024); // 1MB
+
         App::new()
             .app_data(json_cfg)
+            .app_data(payload_cfg)
             .wrap(cors)
             .wrap(Logger::default())
             // 健康检查
@@ -64,6 +69,7 @@ async fn main() -> std::io::Result<()> {
             // Cloudflare API 代理路由
             .service(
                 web::scope("/cloudflare")
+                    .route("/accounts", web::post().to(handlers::get_accounts))
                     .route("/zones", web::post().to(handlers::get_zones))
                     .route("/dns/records", web::post().to(handlers::get_dns_records))
                     .route("/dns/records/create", web::post().to(handlers::create_dns_record))

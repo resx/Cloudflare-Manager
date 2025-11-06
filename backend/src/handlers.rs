@@ -11,11 +11,50 @@ pub async fn health_check() -> impl Responder {
     }))
 }
 
-// 获取所有 Zone
-pub async fn get_zones(payload: String, _req: HttpRequest) -> impl Responder {
-    log::debug!("get_zones received payload: {}", payload);
+// 获取 Cloudflare 账户列表（自动获取 Account ID）
+pub async fn get_accounts(payload: web::Bytes, _req: HttpRequest) -> impl Responder {
+    let payload_str = match String::from_utf8(payload.to_vec()) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("Failed to convert payload to string: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error("Invalid UTF-8 in request body".to_string()));
+        }
+    };
 
-    let req: CloudflareRequest<serde_json::Value> = match serde_json::from_str(&payload) {
+    log::debug!("get_accounts received payload: {}", payload_str);
+
+    let req: CloudflareRequest<serde_json::Value> = match serde_json::from_str(&payload_str) {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("Failed to parse get_accounts request: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(format!("Invalid request format: {}", e)));
+        }
+    };
+
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_accounts().await {
+        Ok(accounts) => HttpResponse::Ok().json(ApiResponse::success(accounts)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 获取所有 Zone
+pub async fn get_zones(payload: web::Bytes, _req: HttpRequest) -> impl Responder {
+    let payload_str = match String::from_utf8(payload.to_vec()) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("Failed to convert payload to string: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error("Invalid UTF-8 in request body".to_string()));
+        }
+    };
+
+    log::debug!("get_zones received payload: {}", payload_str);
+
+    let req: CloudflareRequest<serde_json::Value> = match serde_json::from_str(&payload_str) {
         Ok(r) => r,
         Err(e) => {
             log::error!("Failed to parse get_zones request: {}", e);
@@ -35,14 +74,22 @@ pub async fn get_zones(payload: String, _req: HttpRequest) -> impl Responder {
 }
 
 // 获取 DNS 记录
-pub async fn get_dns_records(payload: String, _req: HttpRequest) -> impl Responder {
-    log::debug!("get_dns_records received payload: {}", payload);
+pub async fn get_dns_records(payload: web::Bytes, _req: HttpRequest) -> impl Responder {
+    let payload_str = match String::from_utf8(payload.to_vec()) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("Failed to convert payload to string: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error("Invalid UTF-8 in request body".to_string()));
+        }
+    };
 
-    let req: CloudflareRequest<GetDnsRecordsRequest> = match serde_json::from_str(&payload) {
+    log::debug!("get_dns_records received payload: {}", payload_str);
+
+    let req: CloudflareRequest<GetDnsRecordsRequest> = match serde_json::from_str(&payload_str) {
         Ok(r) => r,
         Err(e) => {
             log::error!("Failed to parse get_dns_records request: {}",  e);
-            log::error!("Raw payload was: {}", payload);
+            log::error!("Raw payload was: {}", payload_str);
             return HttpResponse::BadRequest().json(ApiResponse::<()>::error(format!("Invalid request format: {}", e)));
         }
     };
@@ -317,7 +364,25 @@ pub async fn purge_cache(req: web::Json<CloudflareRequest<PurgeCacheRequest>>) -
 }
 
 // 获取 SSL 证书信息
-pub async fn get_ssl_certificates(req: web::Json<CloudflareRequest<GetSslCertificatesRequest>>) -> impl Responder {
+pub async fn get_ssl_certificates(payload: web::Bytes, _req: HttpRequest) -> impl Responder {
+    let payload_str = match String::from_utf8(payload.to_vec()) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("Failed to convert payload to string: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error("Invalid UTF-8 in request body".to_string()));
+        }
+    };
+
+    log::debug!("get_ssl_certificates received payload: {}", payload_str);
+
+    let req: CloudflareRequest<GetSslCertificatesRequest> = match serde_json::from_str(&payload_str) {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("Failed to parse get_ssl_certificates request: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(format!("Invalid request format: {}", e)));
+        }
+    };
+
     let client = match CloudflareClient::new(&req.credentials) {
         Ok(c) => c,
         Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
@@ -330,7 +395,25 @@ pub async fn get_ssl_certificates(req: web::Json<CloudflareRequest<GetSslCertifi
 }
 
 // 获取自定义 SSL 证书列表
-pub async fn get_custom_certificates(req: web::Json<CloudflareRequest<GetCustomCertificatesRequest>>) -> impl Responder {
+pub async fn get_custom_certificates(payload: web::Bytes, _req: HttpRequest) -> impl Responder {
+    let payload_str = match String::from_utf8(payload.to_vec()) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("Failed to convert payload to string: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error("Invalid UTF-8 in request body".to_string()));
+        }
+    };
+
+    log::debug!("get_custom_certificates received payload: {}", payload_str);
+
+    let req: CloudflareRequest<GetCustomCertificatesRequest> = match serde_json::from_str(&payload_str) {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("Failed to parse get_custom_certificates request: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(format!("Invalid request format: {}", e)));
+        }
+    };
+
     let client = match CloudflareClient::new(&req.credentials) {
         Ok(c) => c,
         Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
@@ -374,7 +457,25 @@ pub async fn delete_custom_certificate(req: web::Json<CloudflareRequest<DeleteCu
 }
 
 // 获取页面规则
-pub async fn get_page_rules(req: web::Json<CloudflareRequest<GetPageRulesRequest>>) -> impl Responder {
+pub async fn get_page_rules(payload: web::Bytes, _req: HttpRequest) -> impl Responder {
+    let payload_str = match String::from_utf8(payload.to_vec()) {
+        Ok(s) => s,
+        Err(e) => {
+            log::error!("Failed to convert payload to string: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error("Invalid UTF-8 in request body".to_string()));
+        }
+    };
+
+    log::debug!("get_page_rules received payload: {}", payload_str);
+
+    let req: CloudflareRequest<GetPageRulesRequest> = match serde_json::from_str(&payload_str) {
+        Ok(r) => r,
+        Err(e) => {
+            log::error!("Failed to parse get_page_rules request: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(format!("Invalid request format: {}", e)));
+        }
+    };
+
     let client = match CloudflareClient::new(&req.credentials) {
         Ok(c) => c,
         Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),

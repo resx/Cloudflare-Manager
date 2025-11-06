@@ -2,19 +2,17 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export interface CloudflareCredentials {
-  // 主要认证（必需）- 用于大部分 API
-  email: string
-  apiKey: string  // Global API Key
-  // 可选的 API Token - 用于 Analytics 等 GraphQL API
-  apiToken?: string
+  // API Token（必需） - 更安全的认证方式
+  apiToken: string
+  // Account ID - 从 API 自动获取
+  accountId?: string
   alias?: string
 }
 
 export interface CloudflareAccount {
   id: string
-  email: string
-  apiKey: string  // Global API Key（必需）
-  apiToken?: string  // API Token（可选，用于 Analytics）
+  apiToken: string  // API Token（必需）
+  accountId?: string  // Cloudflare Account ID（自动从 API 获取）
   alias: string
   createdAt: string
 }
@@ -53,18 +51,43 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   // 添加账户
-  function addAccount(credentials: CloudflareCredentials) {
-    const newAccount: CloudflareAccount = {
+  async function addAccount(credentials: CloudflareCredentials) {
+    // 先创建临时账户对象用于 API 调用
+    const tempAccount: CloudflareAccount = {
       id: Date.now().toString(),
-      email: credentials.email,
-      apiKey: credentials.apiKey,
       apiToken: credentials.apiToken,
-      alias: credentials.alias || credentials.email,
+      accountId: undefined,
+      alias: credentials.alias || 'Cloudflare Account',
       createdAt: new Date().toISOString()
     }
-    accounts.value.push(newAccount)
+
+    // 临时设置为当前账户以便 API 调用能使用凭证
+    const previousAccount = currentAccount.value
+    currentAccount.value = tempAccount
+
+    try {
+      // 自动从 Cloudflare API 获取 Account ID
+      const { cloudflareApi } = await import('@/api')
+      const cfAccounts = await cloudflareApi.getAccounts()
+
+      // 使用第一个账户的 ID 和名称
+      if (cfAccounts && cfAccounts.length > 0) {
+        tempAccount.accountId = cfAccounts[0].id
+        tempAccount.alias = credentials.alias || cfAccounts[0].name
+        console.log('Auto-fetched Account ID:', cfAccounts[0].id, 'for account:', cfAccounts[0].name)
+      } else {
+        console.warn('No Cloudflare accounts found for this user')
+      }
+    } catch (error) {
+      console.error('Failed to fetch Account ID:', error)
+      // 继续保存账户，即使无法获取 Account ID
+    }
+
+    // 添加到账户列表
+    accounts.value.push(tempAccount)
+    currentAccount.value = tempAccount
     saveAccounts()
-    return newAccount
+    return tempAccount
   }
 
   // 更新账户的 API Token
@@ -79,13 +102,41 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   // 更新账户信息
-  function updateAccount(accountId: string, credentials: CloudflareCredentials) {
+  async function updateAccount(accountId: string, credentials: CloudflareCredentials) {
     const account = accounts.value.find(acc => acc.id === accountId)
     if (account) {
-      account.email = credentials.email
-      account.apiKey = credentials.apiKey
       account.apiToken = credentials.apiToken
-      account.alias = credentials.alias || credentials.email
+      account.alias = credentials.alias || account.alias
+
+      // 临时设置为当前账户以便 API 调用能使用凭证
+      const previousAccount = currentAccount.value
+      currentAccount.value = account
+
+      try {
+        // 自动从 Cloudflare API 获取 Account ID
+        const { cloudflareApi } = await import('@/api')
+        const cfAccounts = await cloudflareApi.getAccounts()
+
+        // 使用第一个账户的 ID 和名称
+        if (cfAccounts && cfAccounts.length > 0) {
+          account.accountId = cfAccounts[0].id
+          if (!credentials.alias) {
+            account.alias = cfAccounts[0].name
+          }
+          console.log('Auto-fetched Account ID:', cfAccounts[0].id, 'for account:', cfAccounts[0].name)
+        } else {
+          console.warn('No Cloudflare accounts found for this user')
+        }
+      } catch (error) {
+        console.error('Failed to fetch Account ID:', error)
+        // 继续保存账户，即使无法获取 Account ID
+      } finally {
+        // 恢复之前的当前账户（如果不是正在更新的账户）
+        if (previousAccount?.id !== accountId) {
+          currentAccount.value = previousAccount
+        }
+      }
+
       saveAccounts()
 
       // 如果更新的是当前账户，同步更新 currentAccount
@@ -119,9 +170,8 @@ export const useAccountStore = defineStore('account', () => {
   function getCurrentCredentials(): CloudflareCredentials | null {
     if (!currentAccount.value) return null
     return {
-      email: currentAccount.value.email,
-      apiKey: currentAccount.value.apiKey,
-      apiToken: currentAccount.value.apiToken
+      apiToken: currentAccount.value.apiToken,
+      accountId: currentAccount.value.accountId
     }
   }
 

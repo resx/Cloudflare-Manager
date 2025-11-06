@@ -1,25 +1,28 @@
 use serde::{Deserialize, Serialize};
 
-// Cloudflare API 凭证
+// Cloudflare API 凭证（仅使用 API Token，更安全）
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct CloudflareCredentials {
-    // Email + Global API Key（必需，用于大部分 API）
-    pub email: Option<String>,
-    #[serde(alias = "apiKey")]  // 支持驼峰命名
-    pub api_key: Option<String>,
-
-    // API Token（可选，用于 Analytics 等 GraphQL API）
-    #[serde(skip_serializing_if = "Option::is_none")]
+    // API Token（必需） - 用户需要创建具有所需权限的 API Token
     #[serde(alias = "apiToken")]  // 支持驼峰命名
-    pub api_token: Option<String>,
+    pub api_token: String,
 }
 
 impl CloudflareCredentials {
     // 验证凭证是否有效
     pub fn is_valid(&self) -> bool {
-        // 必须提供 Email + API Key
-        self.email.is_some() && self.api_key.is_some()
+        // 必须提供 API Token 且不为空
+        !self.api_token.is_empty()
     }
+}
+
+// Cloudflare Account 信息（从 API 自动获取）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CloudflareAccount {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings: Option<serde_json::Value>,
 }
 
 // 通用请求结构

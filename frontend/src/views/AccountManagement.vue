@@ -11,6 +11,10 @@
           </n-button>
         </template>
 
+        <n-alert type="warning" style="margin-bottom: 16px">
+          <strong>安全提示：</strong>本平台使用 API Token 认证，不使用 Global API Key。API Token 更安全，可以限制权限范围和访问时间。
+        </n-alert>
+
         <n-data-table
           :columns="columns"
           :data="accountStore.accounts"
@@ -21,121 +25,123 @@
     </n-space>
 
     <!-- 添加/编辑账户弹窗 -->
-    <n-modal v-model:show="showEditModal" preset="dialog" :title="editingAccount ? '编辑账户' : '添加账户'" style="width: 550px">
-      <n-form ref="formRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="110">
-        <n-alert type="info" style="margin-bottom: 16px; font-size: 13px">
-          <strong>必填：</strong>Email + Global API Key（用于所有基础功能）<br>
-          <strong>可选：</strong>API Token（仅用于 Analytics 统计分析功能）
+    <n-modal v-model:show="showEditModal" preset="dialog" :title="editingAccount ? '编辑账户' : '添加账户'" style="width: 600px">
+      <n-form ref="formRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="100">
+        <n-alert type="warning" style="margin-bottom: 16px; font-size: 13px">
+          <strong>安全提示：</strong>请使用 API Token 而不是 Global API Key。API Token 可以限制权限范围，更加安全。
         </n-alert>
 
-        <!-- Email + API Key（必填） -->
-        <n-divider style="margin: 12px 0; font-weight: bold">基础认证（必填）</n-divider>
-
-        <n-form-item label="邮箱" path="email">
-          <n-input v-model:value="accountForm.email" placeholder="your@email.com" />
-        </n-form-item>
-
-        <n-form-item label="Global API Key" path="apiKey">
-          <n-input
-            v-model:value="accountForm.apiKey"
-            type="password"
-            show-password-on="click"
-            placeholder="输入 Global API Key"
-          />
-        </n-form-item>
-
-        <n-alert type="info" style="margin-bottom: 16px; font-size: 12px">
-          在 Cloudflare Dashboard → My Profile → API Tokens → Global API Key → View
-        </n-alert>
-
-        <!-- API Token（可选） -->
-        <n-divider style="margin: 12px 0; font-weight: bold">Analytics 认证（可选）</n-divider>
-
-        <n-form-item label="API Token">
+        <n-form-item label="API Token" path="apiToken">
           <n-input
             v-model:value="accountForm.apiToken"
             type="password"
             show-password-on="click"
-            placeholder="留空则 Analytics 功能不可用"
+            placeholder="输入您的 API Token"
           />
         </n-form-item>
 
-        <n-alert type="warning" style="margin-bottom: 16px; font-size: 12px">
-          如需使用 Analytics 功能，请创建具有 <strong>Zone.Analytics (Read)</strong> 权限的 API Token
+        <n-alert type="info" style="margin-bottom: 16px; font-size: 12px">
+          <div><strong>如何创建 API Token：</strong></div>
+          <div style="margin-top: 8px">
+            1. 访问 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare Dashboard → API Tokens</a><br>
+            2. 点击 "Create Token"<br>
+            3. 选择 "Create Custom Token"<br>
+            4. 添加所需权限（见下方）
+          </div>
         </n-alert>
 
-        <!-- 别名 -->
-        <n-divider style="margin: 12px 0"></n-divider>
+        <n-collapse style="margin-bottom: 16px">
+          <n-collapse-item title="所需权限列表（点击展开查看）" name="permissions">
+            <div style="font-size: 12px; line-height: 1.8">
+              <strong>Account 级别权限：</strong><br>
+              • Account Settings - Read<br>
+              • Account Analytics - Read<br>
+              • Workers Scripts - Edit<br>
+              <br>
+              <strong>Zone 级别权限：</strong><br>
+              • Zone - Read<br>
+              • Zone Settings - Edit<br>
+              • DNS - Edit<br>
+              • Analytics - Read<br>
+              • SSL and Certificates - Edit<br>
+              • Cache Purge - Purge<br>
+              • Page Rules - Edit<br>
+              • Firewall Services - Edit<br>
+              • Workers Routes - Edit<br>
+            </div>
+          </n-collapse-item>
+        </n-collapse>
 
-        <n-form-item label="别名">
-          <n-input v-model:value="accountForm.alias" placeholder="账户别名（可选）" />
+        <n-form-item label="别名（可选）">
+          <n-input v-model:value="accountForm.alias" placeholder="为账户设置一个别名" />
         </n-form-item>
       </n-form>
 
       <template #action>
         <n-space>
           <n-button @click="showEditModal = false">取消</n-button>
-          <n-button type="primary" @click="handleSaveAccount">确认</n-button>
+          <n-button type="primary" :loading="saving" @click="handleSaveAccount">确认</n-button>
         </n-space>
       </template>
     </n-modal>
 
-    <!-- 添加账户弹窗（简化版） -->
-    <n-modal v-model:show="showAddModal" preset="dialog" title="添加账户" style="width: 550px">
-      <n-form ref="addFormRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="110">
-        <n-alert type="info" style="margin-bottom: 16px; font-size: 13px">
-          <strong>必填：</strong>Email + Global API Key（用于所有基础功能）<br>
-          <strong>可选：</strong>API Token（仅用于 Analytics 统计分析功能）
+    <!-- 添加账户弹窗 -->
+    <n-modal v-model:show="showAddModal" preset="dialog" title="添加账户" style="width: 600px">
+      <n-form ref="addFormRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="100">
+        <n-alert type="warning" style="margin-bottom: 16px; font-size: 13px">
+          <strong>安全提示：</strong>请使用 API Token 而不是 Global API Key。API Token 可以限制权限范围，更加安全。
         </n-alert>
 
-        <!-- Email + API Key（必填） -->
-        <n-divider style="margin: 12px 0; font-weight: bold">基础认证（必填）</n-divider>
-
-        <n-form-item label="邮箱" path="email">
-          <n-input v-model:value="accountForm.email" placeholder="your@email.com" />
-        </n-form-item>
-
-        <n-form-item label="Global API Key" path="apiKey">
-          <n-input
-            v-model:value="accountForm.apiKey"
-            type="password"
-            show-password-on="click"
-            placeholder="输入 Global API Key"
-          />
-        </n-form-item>
-
-        <n-alert type="info" style="margin-bottom: 16px; font-size: 12px">
-          在 Cloudflare Dashboard → My Profile → API Tokens → Global API Key → View
-        </n-alert>
-
-        <!-- API Token（可选） -->
-        <n-divider style="margin: 12px 0; font-weight: bold">Analytics 认证（可选）</n-divider>
-
-        <n-form-item label="API Token">
+        <n-form-item label="API Token" path="apiToken">
           <n-input
             v-model:value="accountForm.apiToken"
             type="password"
             show-password-on="click"
-            placeholder="留空则 Analytics 功能不可用"
+            placeholder="输入您的 API Token"
           />
         </n-form-item>
 
-        <n-alert type="warning" style="margin-bottom: 16px; font-size: 12px">
-          如需使用 Analytics 功能，请创建具有 <strong>Zone.Analytics (Read)</strong> 权限的 API Token
+        <n-alert type="info" style="margin-bottom: 16px; font-size: 12px">
+          <div><strong>如何创建 API Token：</strong></div>
+          <div style="margin-top: 8px">
+            1. 访问 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare Dashboard → API Tokens</a><br>
+            2. 点击 "Create Token"<br>
+            3. 选择 "Create Custom Token"<br>
+            4. 添加所需权限（见下方）
+          </div>
         </n-alert>
 
-        <!-- 别名 -->
-        <n-divider style="margin: 12px 0"></n-divider>
+        <n-collapse style="margin-bottom: 16px">
+          <n-collapse-item title="所需权限列表（点击展开查看）" name="permissions">
+            <div style="font-size: 12px; line-height: 1.8">
+              <strong>Account 级别权限：</strong><br>
+              • Account Settings - Read<br>
+              • Account Analytics - Read<br>
+              • Workers Scripts - Edit<br>
+              <br>
+              <strong>Zone 级别权限：</strong><br>
+              • Zone - Read<br>
+              • Zone Settings - Edit<br>
+              • DNS - Edit<br>
+              • Analytics - Read<br>
+              • SSL and Certificates - Edit<br>
+              • Cache Purge - Purge<br>
+              • Page Rules - Edit<br>
+              • Firewall Services - Edit<br>
+              • Workers Routes - Edit<br>
+            </div>
+          </n-collapse-item>
+        </n-collapse>
 
-        <n-form-item label="别名">
-          <n-input v-model:value="accountForm.alias" placeholder="账户别名（可选）" />
+        <n-form-item label="别名（可选）">
+          <n-input v-model:value="accountForm.alias" placeholder="为账户设置一个别名" />
         </n-form-item>
       </n-form>
 
       <template #action>
         <n-space>
           <n-button @click="showAddModal = false">取消</n-button>
-          <n-button type="primary" @click="handleAddAccount">确认</n-button>
+          <n-button type="primary" :loading="saving" @click="handleAddAccount">确认</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -153,25 +159,23 @@ const accountStore = useAccountStore()
 
 const showAddModal = ref(false)
 const showEditModal = ref(false)
+const saving = ref(false)
 const editingAccount = ref<CloudflareAccount | null>(null)
 
 const accountForm = ref({
-  email: '',
-  apiKey: '',
   apiToken: '',
   alias: ''
 })
 
 const formRules = {
-  email: { required: true, message: '请输入邮箱', trigger: 'blur' },
-  apiKey: { required: true, message: '请输入 Global API Key', trigger: 'blur' }
+  apiToken: { required: true, message: '请输入 API Token', trigger: 'blur' }
 }
 
 const columns: DataTableColumns<CloudflareAccount> = [
   {
     title: '别名',
     key: 'alias',
-    width: 150,
+    width: 200,
     render: (row) => {
       const isCurrent = accountStore.currentAccount?.id === row.id
       return h(
@@ -187,25 +191,19 @@ const columns: DataTableColumns<CloudflareAccount> = [
     }
   },
   {
-    title: 'Email',
-    key: 'email',
-    width: 200
-  },
-  {
-    title: 'Global API Key',
-    key: 'apiKey',
-    width: 150,
-    render: () => h('span', '••••••••••••')
+    title: 'Account ID',
+    key: 'accountId',
+    width: 250,
+    ellipsis: {
+      tooltip: true
+    },
+    render: (row) => row.accountId || h(NTag, { type: 'warning', size: 'small' }, { default: () => '未获取' })
   },
   {
     title: 'API Token',
     key: 'apiToken',
     width: 120,
-    render: (row) => h(
-      NTag,
-      { type: row.apiToken ? 'success' : 'default', size: 'small' },
-      { default: () => row.apiToken ? '已配置' : '未配置' }
-    )
+    render: () => h('span', '••••••••••••')
   },
   {
     title: '创建时间',
@@ -268,58 +266,62 @@ const columns: DataTableColumns<CloudflareAccount> = [
 function handleEditAccount(account: CloudflareAccount) {
   editingAccount.value = account
   accountForm.value = {
-    email: account.email,
-    apiKey: account.apiKey,
-    apiToken: account.apiToken || '',
+    apiToken: account.apiToken,
     alias: account.alias
   }
   showEditModal.value = true
 }
 
-function handleSaveAccount() {
+async function handleSaveAccount() {
   if (!editingAccount.value) return
 
-  const success = accountStore.updateAccount(editingAccount.value.id, {
-    email: accountForm.value.email,
-    apiKey: accountForm.value.apiKey,
-    apiToken: accountForm.value.apiToken || undefined,
-    alias: accountForm.value.alias || accountForm.value.email
-  })
+  saving.value = true
+  try {
+    const success = await accountStore.updateAccount(editingAccount.value.id, {
+      apiToken: accountForm.value.apiToken,
+      alias: accountForm.value.alias || editingAccount.value.alias
+    })
 
-  if (success) {
-    message.success('账户更新成功')
-    showEditModal.value = false
-    editingAccount.value = null
-    accountForm.value = {
-      email: '',
-      apiKey: '',
-      apiToken: '',
-      alias: ''
+    if (success) {
+      message.success('账户更新成功')
+      showEditModal.value = false
+      editingAccount.value = null
+      accountForm.value = {
+        apiToken: '',
+        alias: ''
+      }
+    } else {
+      message.error('账户更新失败')
     }
-  } else {
-    message.error('账户更新失败')
+  } catch (error: any) {
+    message.error(error?.message || '账户更新失败')
+  } finally {
+    saving.value = false
   }
 }
 
-function handleAddAccount() {
-  const account = accountStore.addAccount({
-    email: accountForm.value.email,
-    apiKey: accountForm.value.apiKey,
-    apiToken: accountForm.value.apiToken || undefined,
-    alias: accountForm.value.alias || accountForm.value.email
-  })
+async function handleAddAccount() {
+  saving.value = true
+  try {
+    const account = await accountStore.addAccount({
+      apiToken: accountForm.value.apiToken,
+      alias: accountForm.value.alias
+    })
 
-  if (account) {
-    message.success('账户添加成功')
-    showAddModal.value = false
-    accountForm.value = {
-      email: '',
-      apiKey: '',
-      apiToken: '',
-      alias: ''
+    if (account) {
+      message.success('账户添加成功')
+      showAddModal.value = false
+      accountForm.value = {
+        apiToken: '',
+        alias: ''
+      }
+    } else {
+      message.error('账户添加失败')
     }
-  } else {
-    message.error('账户添加失败')
+  } catch (error: any) {
+    message.error(error?.message || '账户添加失败')
+  } finally {
+    saving.value = false
   }
 }
 

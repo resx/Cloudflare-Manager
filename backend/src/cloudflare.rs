@@ -11,9 +11,9 @@ pub struct CloudflareClient {
 
 impl CloudflareClient {
     pub fn new(credentials: &CloudflareCredentials) -> Result<Self, String> {
-        // 验证凭证 - 必须提供 email + api_key
-        if credentials.email.is_none() || credentials.api_key.is_none() {
-            return Err("Invalid credentials: email and api_key are required".to_string());
+        // 验证凭证 - 必须提供 API Token
+        if !credentials.is_valid() {
+            return Err("Invalid credentials: API Token is required".to_string());
         }
 
         Ok(CloudflareClient {
@@ -22,43 +22,58 @@ impl CloudflareClient {
         })
     }
 
-    // REST API 使用 Email + Global API Key（主要认证方式）
+    // 所有 API 使用 API Token 认证（Bearer Token）
     fn get_headers(&self) -> header::HeaderMap {
         let mut headers = header::HeaderMap::new();
 
-        // REST API 始终使用 Email + API Key
-        if let (Some(email), Some(api_key)) = (&self.credentials.email, &self.credentials.api_key) {
-            headers.insert("X-Auth-Email", header::HeaderValue::from_str(email).unwrap());
-            headers.insert("X-Auth-Key", header::HeaderValue::from_str(api_key).unwrap());
-        }
+        // 使用 Bearer Token 认证
+        headers.insert(
+            header::AUTHORIZATION,
+            header::HeaderValue::from_str(&format!("Bearer {}", self.credentials.api_token))
+                .unwrap_or_else(|_| header::HeaderValue::from_static(""))
+        );
 
         headers.insert(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
         headers
     }
 
-    // GraphQL API 优先使用 API Token，回退到 Email + API Key
+    // GraphQL API 也使用相同的 Bearer Token
     fn get_graphql_headers(&self) -> header::HeaderMap {
-        let mut headers = header::HeaderMap::new();
+        self.get_headers()
+    }
 
-        // 优先使用 API Token（用于 Analytics）
-        if let Some(token) = &self.credentials.api_token {
-            log::info!("Using API Token for GraphQL authentication");
-            headers.insert(
-                header::AUTHORIZATION,
-                header::HeaderValue::from_str(&format!("Bearer {}", token)).unwrap()
-            );
-        }
-        // 回退到 Email + API Key
-        else if let (Some(email), Some(api_key)) = (&self.credentials.email, &self.credentials.api_key) {
-            log::info!("Using Email + API Key for GraphQL authentication (API Token not provided)");
-            headers.insert("X-Auth-Email", header::HeaderValue::from_str(email).unwrap());
-            headers.insert("X-Auth-Key", header::HeaderValue::from_str(api_key).unwrap());
-        } else {
-            log::warn!("No valid credentials available for GraphQL authentication");
+    // 获取用户的 Cloudflare 账户列表（自动获取 Account ID）
+    pub async fn get_accounts(&self) -> Result<Vec<CloudflareAccount>, String> {
+        let url = format!("{}/accounts", CLOUDFLARE_API_BASE);
+
+        log::info!("Fetching Cloudflare accounts for user");
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let errors = json["errors"].as_array()
+                .and_then(|arr| arr.get(0))
+                .and_then(|err| err["message"].as_str())
+                .unwrap_or("Unknown error");
+            return Err(format!("API error ({}): {}", status, errors));
         }
 
-        headers.insert(header::CONTENT_TYPE, header::HeaderValue::from_static("application/json"));
-        headers
+        let accounts: Vec<CloudflareAccount> = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse accounts: {}", e))?;
+
+        log::info!("Successfully fetched {} Cloudflare accounts", accounts.len());
+        Ok(accounts)
     }
 
     // 获取所有 Zone
@@ -1011,16 +1026,21 @@ async function handleRequest(request) {{
             .map_err(|e| format!("Request failed: {}", e))?;
 
         let status = response.status();
+        log::info!("SSL certificates API response status: {}", status);
+
         let json: serde_json::Value = response
             .json()
             .await
             .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        log::debug!("SSL certificates API response: {:?}", json);
 
         if !json["success"].as_bool().unwrap_or(false) {
             let errors = json["errors"].as_array()
                 .and_then(|arr| arr.get(0))
                 .and_then(|err| err["message"].as_str())
                 .unwrap_or("Unknown error");
+            log::error!("SSL certificates API error ({}): {}, Full response: {:?}", status, errors, json);
             return Err(format!("API error ({}): {}", status, errors));
         }
 
@@ -1143,16 +1163,21 @@ async function handleRequest(request) {{
             .map_err(|e| format!("Request failed: {}", e))?;
 
         let status = response.status();
+        log::info!("Page rules API response status: {}", status);
+
         let json: serde_json::Value = response
             .json()
             .await
             .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        log::debug!("Page rules API response: {:?}", json);
 
         if !json["success"].as_bool().unwrap_or(false) {
             let errors = json["errors"].as_array()
                 .and_then(|arr| arr.get(0))
                 .and_then(|err| err["message"].as_str())
                 .unwrap_or("Unknown error");
+            log::error!("Page rules API error ({}): {}, Full response: {:?}", status, errors, json);
             return Err(format!("API error ({}): {}", status, errors));
         }
 

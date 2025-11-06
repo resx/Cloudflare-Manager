@@ -267,7 +267,14 @@ async function loadSslCertificates() {
     }
   } catch (error: any) {
     console.error('Load SSL certificates error:', error)
-    // Fail silently, keep default values
+
+    // 提供更友好的错误提示
+    if (error.isFeatureLimited) {
+      message.info('Universal SSL 证书信息需要特定权限，已显示默认值')
+    } else if (error.status !== 404) {
+      // 404 可能只是没有证书，不需要显示错误
+      message.warning('加载 SSL 证书信息失败，已显示默认值')
+    }
   } finally {
     loading.value = false
   }
@@ -283,8 +290,15 @@ async function loadCustomCertificates() {
     customCertificates.value = await cloudflareApi.getCustomCertificates(currentZone.value.id)
     message.success(`成功加载 ${customCertificates.value.length} 个自定义证书`)
   } catch (error: any) {
-    message.warning(error?.message || '加载自定义证书失败（可能需要 Business 计划）')
     console.error('Load custom certificates error:', error)
+
+    // 检查是否是套餐限制
+    if (error.isFeatureLimited) {
+      message.info('自定义证书功能需要 Business 或 Enterprise 套餐')
+    } else {
+      message.warning(error?.message || '加载自定义证书失败')
+    }
+
     customCertificates.value = []
   } finally {
     customLoading.value = false

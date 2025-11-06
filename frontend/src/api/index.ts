@@ -44,7 +44,64 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Error:', error)
-    return Promise.reject(error)
+
+    // 提取错误信息
+    let errorMessage = '请求失败'
+    let isFeatureLimited = false
+
+    if (error.response) {
+      const { status, data } = error.response
+
+      // 处理后端返回的错误
+      if (data && typeof data === 'object') {
+        if (data.error) {
+          errorMessage = data.error
+
+          // 检测是否是套餐限制或权限问题
+          const limitKeywords = [
+            'entitlement',
+            'subscription',
+            'plan',
+            'upgrade',
+            'feature not available',
+            'not entitled',
+            'requires a paid plan',
+            'only available to',
+            'custom certificate',
+            'does not support account owned tokens',
+            'user token required',
+            'token type not supported'
+          ]
+
+          isFeatureLimited = limitKeywords.some(keyword =>
+            errorMessage.toLowerCase().includes(keyword)
+          )
+        }
+      }
+
+      // HTTP 状态码
+      if (status === 403) {
+        errorMessage = '权限不足或功能未授权'
+        isFeatureLimited = true
+      } else if (status === 402) {
+        errorMessage = '此功能需要付费套餐'
+        isFeatureLimited = true
+      } else if (status === 400 && !data?.error) {
+        errorMessage = '请求参数错误'
+      }
+    } else if (error.request) {
+      errorMessage = '网络请求失败，请检查网络连接'
+    }
+
+    // 构造增强的错误对象
+    const enhancedError = new Error(errorMessage)
+    Object.assign(enhancedError, {
+      originalError: error,
+      isFeatureLimited,
+      status: error.response?.status
+    })
+
+    return Promise.reject(enhancedError)
   }
 )
 
@@ -54,6 +111,12 @@ export interface Zone {
   name: string
   status: string
   name_servers: string[]
+}
+
+export interface CloudflareAccount {
+  id: string
+  name: string
+  settings?: any
 }
 
 export interface DnsRecord {
@@ -294,6 +357,12 @@ export interface CreateRateLimitRequest {
 }
 
 export const cloudflareApi = {
+  // Cloudflare 账户
+  async getAccounts(): Promise<CloudflareAccount[]> {
+    const res = await api.post('/cloudflare/accounts', {})
+    return res.data || []
+  },
+
   // Zone 相关
   async getZones(): Promise<Zone[]> {
     const res = await api.post('/cloudflare/zones', {})

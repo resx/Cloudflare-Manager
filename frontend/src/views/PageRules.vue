@@ -14,6 +14,10 @@
         页面规则允许您为特定 URL 模式自定义 Cloudflare 设置。规则按优先级从高到低执行（1 优先级最高）。
       </n-alert>
 
+      <n-alert type="warning" style="margin-bottom: 16px" title="Token 权限要求">
+        页面规则 API 需要<strong>用户级别</strong>的 API Token，不支持账户级别的 Token。请确保您的 Token 具有正确的权限范围。
+      </n-alert>
+
       <n-spin :show="loading">
         <n-empty v-if="rules.length === 0" description="暂无页面规则">
           <template #extra>
@@ -235,7 +239,16 @@ async function loadPageRules() {
   try {
     rules.value = await cloudflareApi.getPageRules(currentZone.value.id)
   } catch (error: any) {
-    message.error(error?.message || '加载页面规则失败')
+    console.error('Load page rules error:', error)
+
+    // 检查是否是Token类型限制
+    if (error.message && error.message.includes('does not support account owned tokens')) {
+      message.warning('页面规则功能需要用户级别的 API Token，账户级别的Token不支持此功能')
+    } else if (error.isFeatureLimited) {
+      message.warning('页面规则功能需要特定权限或付费套餐')
+    } else {
+      message.error(error?.message || '加载页面规则失败')
+    }
   } finally {
     loading.value = false
   }

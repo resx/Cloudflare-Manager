@@ -115,54 +115,55 @@
     </n-layout>
 
     <!-- 添加账户弹窗 -->
-    <n-modal v-model:show="showAccountModal" preset="dialog" title="添加 Cloudflare 账户" style="width: 550px">
-      <n-form ref="formRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="110">
-        <n-alert type="info" style="margin-bottom: 16px; font-size: 13px">
-          <strong>必填：</strong>Email + Global API Key（用于所有基础功能）<br>
-          <strong>可选：</strong>API Token（仅用于 Analytics 统计分析功能）
+    <n-modal v-model:show="showAccountModal" preset="dialog" title="添加 Cloudflare 账户" style="width: 600px">
+      <n-form ref="formRef" :model="accountForm" :rules="formRules" label-placement="left" label-width="100">
+        <n-alert type="warning" style="margin-bottom: 16px; font-size: 13px">
+          <strong>安全提示：</strong>请使用 API Token 而不是 Global API Key。API Token 可以限制权限范围，更加安全。
         </n-alert>
 
-        <!-- Email + API Key（必填） -->
-        <n-divider style="margin: 12px 0; font-weight: bold">基础认证（必填）</n-divider>
-
-        <n-form-item label="邮箱" path="email">
-          <n-input v-model:value="accountForm.email" placeholder="your@email.com" />
-        </n-form-item>
-
-        <n-form-item label="Global API Key" path="apiKey">
-          <n-input
-            v-model:value="accountForm.apiKey"
-            type="password"
-            show-password-on="click"
-            placeholder="输入 Global API Key"
-          />
-        </n-form-item>
-
-        <n-alert type="info" style="margin-bottom: 16px; font-size: 12px">
-          在 Cloudflare Dashboard → My Profile → API Tokens → Global API Key → View
-        </n-alert>
-
-        <!-- API Token（可选） -->
-        <n-divider style="margin: 12px 0; font-weight: bold">Analytics 认证（可选）</n-divider>
-
-        <n-form-item label="API Token">
+        <n-form-item label="API Token" path="apiToken">
           <n-input
             v-model:value="accountForm.apiToken"
             type="password"
             show-password-on="click"
-            placeholder="留空则 Analytics 功能不可用"
+            placeholder="输入您的 API Token"
           />
         </n-form-item>
 
-        <n-alert type="warning" style="margin-bottom: 16px; font-size: 12px">
-          如需使用 Analytics 功能，请创建具有 <strong>Zone.Analytics (Read)</strong> 权限的 API Token
+        <n-alert type="info" style="margin-bottom: 16px; font-size: 12px">
+          <div><strong>如何创建 API Token：</strong></div>
+          <div style="margin-top: 8px">
+            1. 访问 <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare Dashboard → API Tokens</a><br>
+            2. 点击 "Create Token"<br>
+            3. 选择 "Create Custom Token"<br>
+            4. 添加以下权限：
+          </div>
         </n-alert>
 
-        <!-- 别名 -->
-        <n-divider style="margin: 12px 0"></n-divider>
+        <n-collapse style="margin-bottom: 16px">
+          <n-collapse-item title="所需权限列表（点击展开查看）" name="permissions">
+            <div style="font-size: 12px; line-height: 1.8">
+              <strong>Account 级别权限：</strong><br>
+              • Account Settings - Read<br>
+              • Account Analytics - Read<br>
+              • Workers Scripts - Edit<br>
+              <br>
+              <strong>Zone 级别权限：</strong><br>
+              • Zone - Read<br>
+              • Zone Settings - Edit<br>
+              • DNS - Edit<br>
+              • Analytics - Read<br>
+              • SSL and Certificates - Edit<br>
+              • Cache Purge - Purge<br>
+              • Page Rules - Edit<br>
+              • Firewall Services - Edit<br>
+              • Workers Routes - Edit<br>
+            </div>
+          </n-collapse-item>
+        </n-collapse>
 
-        <n-form-item label="别名">
-          <n-input v-model:value="accountForm.alias" placeholder="账户别名（可选）" />
+        <n-form-item label="别名（可选）">
+          <n-input v-model:value="accountForm.alias" placeholder="为账户设置一个别名" />
         </n-form-item>
       </n-form>
 
@@ -179,7 +180,7 @@
 <script setup lang="ts">
 import { ref, computed, h, onMounted, watch, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useMessage, NIcon } from 'naive-ui'
+import { useMessage, NIcon, NTag, NSpace } from 'naive-ui'
 import type { MenuOption, DropdownOption } from 'naive-ui'
 import {
   CloudOutline,
@@ -223,20 +224,33 @@ const zones = ref<Zone[]>([])
 const currentZone = ref<Zone | null>(null)
 
 const accountForm = ref({
-  email: '',
-  apiKey: '',
   apiToken: '',
   alias: ''
 })
 
 const formRules = {
-  email: { required: true, message: '请输入邮箱', trigger: 'blur' },
-  apiKey: { required: true, message: '请输入 Global API Key', trigger: 'blur' }
+  apiToken: { required: true, message: '请输入 API Token', trigger: 'blur' }
 }
 
 // 菜单图标渲染
 function renderIcon(icon: any) {
   return () => h(NIcon, null, { default: () => h(icon) })
+}
+
+// 渲染带标签的菜单项
+function renderLabelWithTag(label: string, tagText?: string, tagType?: 'warning' | 'error' | 'info') {
+  if (!tagText) return label
+
+  return () => h(
+    NSpace,
+    { align: 'center', size: 8 },
+    {
+      default: () => [
+        h('span', label),
+        h(NTag, { type: tagType || 'warning', size: 'small' }, { default: () => tagText })
+      ]
+    }
+  )
 }
 
 // 全局功能菜单
@@ -329,12 +343,12 @@ const zoneMenuOptions = computed<MenuOption[]>(() => {
       icon: renderIcon(ShieldCheckmarkOutline)
     },
     {
-      label: 'WAF 规则',
+      label: renderLabelWithTag('WAF 规则', 'Pro+', 'warning'),
       key: '/waf',
       icon: renderIcon(ShieldCheckmarkOutline)
     },
     {
-      label: '速率限制',
+      label: renderLabelWithTag('速率限制', 'Pro+', 'warning'),
       key: '/rate-limits',
       icon: renderIcon(SpeedometerOutline)
     },
@@ -344,12 +358,12 @@ const zoneMenuOptions = computed<MenuOption[]>(() => {
       icon: renderIcon(StatsChartOutline)
     },
     {
-      label: '页面规则',
+      label: renderLabelWithTag('页面规则', '用户Token', 'info'),
       key: '/page-rules',
       icon: renderIcon(DocumentTextOutline)
     },
     {
-      label: '证书管理',
+      label: renderLabelWithTag('证书管理', 'Business+', 'warning'),
       key: '/certificates',
       icon: renderIcon(RibbonOutline)
     }
@@ -462,11 +476,9 @@ function handleThemeSelect(key: string) {
   themeStore.setTheme(key as 'light' | 'dark' | 'auto')
 }
 
-function handleAddAccount() {
-  const account = accountStore.addAccount({
-    email: accountForm.value.email,
-    apiKey: accountForm.value.apiKey,
-    apiToken: accountForm.value.apiToken || undefined,
+async function handleAddAccount() {
+  const account = await accountStore.addAccount({
+    apiToken: accountForm.value.apiToken,
     alias: accountForm.value.alias
   })
 
@@ -474,8 +486,6 @@ function handleAddAccount() {
     accountStore.switchAccount(account.id)
     showAccountModal.value = false
     accountForm.value = {
-      email: '',
-      apiKey: '',
       apiToken: '',
       alias: ''
     }
