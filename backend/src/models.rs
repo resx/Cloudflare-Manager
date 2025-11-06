@@ -468,6 +468,148 @@ pub struct DeleteCustomCertificateRequest {
     pub certificate_id: String,
 }
 
+// WAF 规则管理
+#[derive(Debug, Deserialize)]
+pub struct GetWafPackagesRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WafPackage {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub detection_mode: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sensitivity: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_mode: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetWafRulesRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "packageId")]
+    pub package_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WafRule {
+    pub id: String,
+    pub description: String,
+    pub priority: String,
+    pub group: WafRuleGroup,
+    pub mode: String,
+    pub allowed_modes: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WafRuleGroup {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateWafRuleRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "packageId")]
+    pub package_id: String,
+    #[serde(alias = "ruleId")]
+    pub rule_id: String,
+    pub mode: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateWafPackageRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "packageId")]
+    pub package_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sensitivity: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_mode: Option<String>,
+}
+
+// Rate Limiting
+#[derive(Debug, Deserialize)]
+pub struct GetRateLimitsRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RateLimit {
+    pub id: String,
+    pub disabled: bool,
+    pub description: String,
+    pub match_request: MatchRequest,
+    pub threshold: u32,
+    pub period: u32,
+    pub action: RateLimitAction,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MatchRequest {
+    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub methods: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schemes: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RateLimitAction {
+    pub mode: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response: Option<RateLimitResponse>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RateLimitResponse {
+    pub content_type: String,
+    pub body: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateRateLimitRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    pub disabled: bool,
+    pub description: String,
+    pub match_request: MatchRequest,
+    pub threshold: u32,
+    pub period: u32,
+    pub action: RateLimitAction,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateRateLimitRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "rateLimitId")]
+    pub rate_limit_id: String,
+    pub disabled: bool,
+    pub description: String,
+    pub match_request: MatchRequest,
+    pub threshold: u32,
+    pub period: u32,
+    pub action: RateLimitAction,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteRateLimitRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "rateLimitId")]
+    pub rate_limit_id: String,
+}
+
 // API 响应
 #[derive(Debug, Serialize)]
 pub struct ApiResponse<T> {

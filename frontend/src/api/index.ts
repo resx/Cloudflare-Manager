@@ -231,6 +231,68 @@ export interface PageRuleAction {
   value: any
 }
 
+// WAF 规则相关
+export interface WafPackage {
+  id: string
+  name: string
+  description: string
+  detection_mode: string
+  sensitivity?: string
+  action_mode?: string
+}
+
+export interface WafRule {
+  id: string
+  description: string
+  priority: string
+  group: WafRuleGroup
+  mode: string
+  allowed_modes: string[]
+}
+
+export interface WafRuleGroup {
+  id: string
+  name: string
+}
+
+// Rate Limiting 相关
+export interface RateLimit {
+  id: string
+  disabled: boolean
+  description: string
+  match_request: MatchRequest
+  threshold: number
+  period: number
+  action: RateLimitAction
+}
+
+export interface MatchRequest {
+  url: string
+  methods?: string[]
+  schemes?: string[]
+}
+
+export interface RateLimitAction {
+  mode: string  // simulate, ban, challenge, js_challenge
+  timeout?: number
+  response?: RateLimitResponse
+}
+
+export interface RateLimitResponse {
+  content_type: string
+  body: string
+}
+
+export interface CreateRateLimitRequest {
+  zone_id: string
+  disabled: boolean
+  description: string
+  match_request: MatchRequest
+  threshold: number
+  period: number
+  action: RateLimitAction
+}
+
 export const cloudflareApi = {
   // Zone 相关
   async getZones(): Promise<Zone[]> {
@@ -438,6 +500,68 @@ export const cloudflareApi = {
     const res = await api.post('/cloudflare/pagerules/delete', {
       zone_id: zoneId,
       rule_id: ruleId
+    })
+    return res.data
+  },
+
+  // WAF 规则管理
+  async getWafPackages(zoneId: string): Promise<WafPackage[]> {
+    const res = await api.post('/cloudflare/waf/packages', { zone_id: zoneId })
+    return res.data || []
+  },
+
+  async getWafRules(zoneId: string, packageId: string): Promise<WafRule[]> {
+    const res = await api.post('/cloudflare/waf/rules', {
+      zone_id: zoneId,
+      package_id: packageId
+    })
+    return res.data || []
+  },
+
+  async updateWafRule(zoneId: string, packageId: string, ruleId: string, mode: string): Promise<WafRule> {
+    const res = await api.post('/cloudflare/waf/rules/update', {
+      zone_id: zoneId,
+      package_id: packageId,
+      rule_id: ruleId,
+      mode: mode
+    })
+    return res.data
+  },
+
+  async updateWafPackage(zoneId: string, packageId: string, sensitivity?: string, actionMode?: string): Promise<WafPackage> {
+    const res = await api.post('/cloudflare/waf/packages/update', {
+      zone_id: zoneId,
+      package_id: packageId,
+      sensitivity: sensitivity,
+      action_mode: actionMode
+    })
+    return res.data
+  },
+
+  // Rate Limiting
+  async getRateLimits(zoneId: string): Promise<RateLimit[]> {
+    const res = await api.post('/cloudflare/ratelimits', { zone_id: zoneId })
+    return res.data || []
+  },
+
+  async createRateLimit(request: CreateRateLimitRequest): Promise<RateLimit> {
+    const res = await api.post('/cloudflare/ratelimits/create', request)
+    return res.data
+  },
+
+  async updateRateLimit(zoneId: string, rateLimitId: string, request: CreateRateLimitRequest): Promise<RateLimit> {
+    const res = await api.post('/cloudflare/ratelimits/update', {
+      zone_id: zoneId,
+      rate_limit_id: rateLimitId,
+      ...request
+    })
+    return res.data
+  },
+
+  async deleteRateLimit(zoneId: string, rateLimitId: string): Promise<string> {
+    const res = await api.post('/cloudflare/ratelimits/delete', {
+      zone_id: zoneId,
+      rate_limit_id: rateLimitId
     })
     return res.data
   }

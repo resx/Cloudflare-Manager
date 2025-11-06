@@ -1316,4 +1316,297 @@ async function handleRequest(request) {{
         log::info!("Successfully deleted page rule {} for zone {}", rule_id, zone_id);
         Ok(rule_id.to_string())
     }
+
+    // ===== WAF 规则管理 =====
+
+    // 获取 WAF 包列表
+    pub async fn get_waf_packages(&self, zone_id: &str) -> Result<Vec<WafPackage>, String> {
+        let url = format!("{}/zones/{}/firewall/waf/packages", CLOUDFLARE_API_BASE, zone_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let packages: Vec<WafPackage> = json["result"]
+            .as_array()
+            .ok_or("Invalid result format")?
+            .iter()
+            .filter_map(|v| serde_json::from_value(v.clone()).ok())
+            .collect();
+
+        Ok(packages)
+    }
+
+    // 获取 WAF 规则列表
+    pub async fn get_waf_rules(&self, zone_id: &str, package_id: &str) -> Result<Vec<WafRule>, String> {
+        let url = format!(
+            "{}/zones/{}/firewall/waf/packages/{}/rules",
+            CLOUDFLARE_API_BASE, zone_id, package_id
+        );
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let rules: Vec<WafRule> = json["result"]
+            .as_array()
+            .ok_or("Invalid result format")?
+            .iter()
+            .filter_map(|v| serde_json::from_value(v.clone()).ok())
+            .collect();
+
+        Ok(rules)
+    }
+
+    // 更新 WAF 规则
+    pub async fn update_waf_rule(
+        &self,
+        zone_id: &str,
+        package_id: &str,
+        rule_id: &str,
+        mode: &str,
+    ) -> Result<WafRule, String> {
+        let url = format!(
+            "{}/zones/{}/firewall/waf/packages/{}/rules/{}",
+            CLOUDFLARE_API_BASE, zone_id, package_id, rule_id
+        );
+
+        let body = serde_json::json!({
+            "mode": mode
+        });
+
+        let response = self.client
+            .patch(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let rule: WafRule = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse WAF rule: {}", e))?;
+
+        Ok(rule)
+    }
+
+    // 更新 WAF 包设置
+    pub async fn update_waf_package(
+        &self,
+        zone_id: &str,
+        package_id: &str,
+        sensitivity: Option<&str>,
+        action_mode: Option<&str>,
+    ) -> Result<WafPackage, String> {
+        let url = format!(
+            "{}/zones/{}/firewall/waf/packages/{}",
+            CLOUDFLARE_API_BASE, zone_id, package_id
+        );
+
+        let mut body = serde_json::Map::new();
+        if let Some(s) = sensitivity {
+            body.insert("sensitivity".to_string(), serde_json::Value::String(s.to_string()));
+        }
+        if let Some(a) = action_mode {
+            body.insert("action_mode".to_string(), serde_json::Value::String(a.to_string()));
+        }
+
+        let response = self.client
+            .patch(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let package: WafPackage = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse WAF package: {}", e))?;
+
+        Ok(package)
+    }
+
+    // ===== Rate Limiting =====
+
+    // 获取速率限制规则列表
+    pub async fn get_rate_limits(&self, zone_id: &str) -> Result<Vec<RateLimit>, String> {
+        let url = format!("{}/zones/{}/rate_limits", CLOUDFLARE_API_BASE, zone_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let rate_limits: Vec<RateLimit> = json["result"]
+            .as_array()
+            .ok_or("Invalid result format")?
+            .iter()
+            .filter_map(|v| serde_json::from_value(v.clone()).ok())
+            .collect();
+
+        Ok(rate_limits)
+    }
+
+    // 创建速率限制规则
+    pub async fn create_rate_limit(&self, zone_id: &str, rate_limit: &CreateRateLimitRequest) -> Result<RateLimit, String> {
+        let url = format!("{}/zones/{}/rate_limits", CLOUDFLARE_API_BASE, zone_id);
+
+        let body = serde_json::json!({
+            "disabled": rate_limit.disabled,
+            "description": rate_limit.description,
+            "match": {
+                "request": {
+                    "url": rate_limit.match_request.url,
+                    "methods": rate_limit.match_request.methods,
+                    "schemes": rate_limit.match_request.schemes
+                }
+            },
+            "threshold": rate_limit.threshold,
+            "period": rate_limit.period,
+            "action": rate_limit.action
+        });
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let rate_limit: RateLimit = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse rate limit: {}", e))?;
+
+        Ok(rate_limit)
+    }
+
+    // 更新速率限制规则
+    pub async fn update_rate_limit(
+        &self,
+        zone_id: &str,
+        rate_limit_id: &str,
+        rate_limit: &UpdateRateLimitRequest,
+    ) -> Result<RateLimit, String> {
+        let url = format!("{}/zones/{}/rate_limits/{}", CLOUDFLARE_API_BASE, zone_id, rate_limit_id);
+
+        let body = serde_json::json!({
+            "disabled": rate_limit.disabled,
+            "description": rate_limit.description,
+            "match": {
+                "request": {
+                    "url": rate_limit.match_request.url,
+                    "methods": rate_limit.match_request.methods,
+                    "schemes": rate_limit.match_request.schemes
+                }
+            },
+            "threshold": rate_limit.threshold,
+            "period": rate_limit.period,
+            "action": rate_limit.action
+        });
+
+        let response = self.client
+            .put(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let rate_limit: RateLimit = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse rate limit: {}", e))?;
+
+        Ok(rate_limit)
+    }
+
+    // 删除速率限制规则
+    pub async fn delete_rate_limit(&self, zone_id: &str, rate_limit_id: &str) -> Result<String, String> {
+        let url = format!("{}/zones/{}/rate_limits/{}", CLOUDFLARE_API_BASE, zone_id, rate_limit_id);
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        Ok("Rate limit deleted successfully".to_string())
+    }
 }

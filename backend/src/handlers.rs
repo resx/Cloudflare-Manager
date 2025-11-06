@@ -424,3 +424,121 @@ pub async fn delete_page_rule(req: web::Json<CloudflareRequest<DeletePageRuleReq
         Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
     }
 }
+
+// ===== WAF 规则管理 =====
+
+// 获取 WAF 包列表
+pub async fn get_waf_packages(req: web::Json<CloudflareRequest<GetWafPackagesRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_waf_packages(&req.data.zone_id).await {
+        Ok(packages) => HttpResponse::Ok().json(ApiResponse::success(packages)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 获取 WAF 规则列表
+pub async fn get_waf_rules(req: web::Json<CloudflareRequest<GetWafRulesRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_waf_rules(&req.data.zone_id, &req.data.package_id).await {
+        Ok(rules) => HttpResponse::Ok().json(ApiResponse::success(rules)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 更新 WAF 规则
+pub async fn update_waf_rule(req: web::Json<CloudflareRequest<UpdateWafRuleRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.update_waf_rule(
+        &req.data.zone_id,
+        &req.data.package_id,
+        &req.data.rule_id,
+        &req.data.mode,
+    ).await {
+        Ok(rule) => HttpResponse::Ok().json(ApiResponse::success(rule)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 更新 WAF 包设置
+pub async fn update_waf_package(req: web::Json<CloudflareRequest<UpdateWafPackageRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.update_waf_package(
+        &req.data.zone_id,
+        &req.data.package_id,
+        req.data.sensitivity.as_deref(),
+        req.data.action_mode.as_deref(),
+    ).await {
+        Ok(package) => HttpResponse::Ok().json(ApiResponse::success(package)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// ===== Rate Limiting =====
+
+// 获取速率限制规则列表
+pub async fn get_rate_limits(req: web::Json<CloudflareRequest<GetRateLimitsRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_rate_limits(&req.data.zone_id).await {
+        Ok(rate_limits) => HttpResponse::Ok().json(ApiResponse::success(rate_limits)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 创建速率限制规则
+pub async fn create_rate_limit(req: web::Json<CloudflareRequest<CreateRateLimitRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.create_rate_limit(&req.data.zone_id, &req.data).await {
+        Ok(rate_limit) => HttpResponse::Ok().json(ApiResponse::success(rate_limit)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 更新速率限制规则
+pub async fn update_rate_limit(req: web::Json<CloudflareRequest<UpdateRateLimitRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.update_rate_limit(&req.data.zone_id, &req.data.rate_limit_id, &req.data).await {
+        Ok(rate_limit) => HttpResponse::Ok().json(ApiResponse::success(rate_limit)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 删除速率限制规则
+pub async fn delete_rate_limit(req: web::Json<CloudflareRequest<DeleteRateLimitRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.delete_rate_limit(&req.data.zone_id, &req.data.rate_limit_id).await {
+        Ok(message) => HttpResponse::Ok().json(ApiResponse::success(message)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}

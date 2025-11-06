@@ -329,6 +329,16 @@ const zoneMenuOptions = computed<MenuOption[]>(() => {
       icon: renderIcon(ShieldCheckmarkOutline)
     },
     {
+      label: 'WAF 规则',
+      key: '/waf',
+      icon: renderIcon(ShieldCheckmarkOutline)
+    },
+    {
+      label: '速率限制',
+      key: '/rate-limits',
+      icon: renderIcon(SpeedometerOutline)
+    },
+    {
       label: '统计分析',
       key: '/analytics',
       icon: renderIcon(StatsChartOutline)

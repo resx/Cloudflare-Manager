@@ -63,6 +63,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '防火墙' }
       },
       {
+        path: '/waf',
+        name: 'WAF',
+        component: () => import('@/views/WAF.vue'),
+        meta: { title: 'WAF 规则' }
+      },
+      {
+        path: '/rate-limits',
+        name: 'RateLimits',
+        component: () => import('@/views/RateLimits.vue'),
+        meta: { title: '速率限制' }
+      },
+      {
         path: '/analytics',
         name: 'Analytics',
         component: () => import('@/views/Analytics.vue'),
