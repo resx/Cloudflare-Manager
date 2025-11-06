@@ -142,6 +142,38 @@ export interface AnalyticsData {
   content: ContentStat[]
 }
 
+// 缓存清除相关
+export interface PurgeCacheRequest {
+  zone_id: string
+  purge_everything?: boolean
+  files?: string[]
+  tags?: string[]
+}
+
+export interface PurgeCacheResponse {
+  id: string
+}
+
+// SSL 证书相关
+export interface SslCertificate {
+  id: string
+  type: string
+  status: string
+  primary_certificate?: string
+  certificates?: CertificateDetail[]
+  hosts?: string[]
+}
+
+export interface CertificateDetail {
+  id: string
+  status: string
+  issuer: string
+  signature: string
+  serial_number: string
+  expires_on: string
+  uploaded_on: string
+}
+
 export const cloudflareApi = {
   // Zone 相关
   async getZones(): Promise<Zone[]> {
@@ -240,6 +272,18 @@ export const cloudflareApi = {
       time_range: timeRange
     })
     return res.data
+  },
+
+  // 缓存清除
+  async purgeCache(request: PurgeCacheRequest): Promise<PurgeCacheResponse> {
+    const res = await api.post('/cloudflare/cache/purge', request)
+    return res.data
+  },
+
+  // SSL 证书
+  async getSslCertificates(zoneId: string): Promise<SslCertificate[]> {
+    const res = await api.post('/cloudflare/ssl/certificates', { zone_id: zoneId })
+    return res.data || []
   }
 }
 

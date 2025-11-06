@@ -221,12 +221,37 @@ async function loadSSLSettings() {
       }
     })
 
-    // TODO: 获取证书信息
-    certInfo.value = {
-      status: 'active',
-      type: 'Universal SSL',
-      issuer: "Let's Encrypt",
-      signature: 'SHA256-RSA'
+    // 获取 SSL 证书信息
+    try {
+      const certificates = await cloudflareApi.getSslCertificates(currentZone.value.id)
+      if (certificates && certificates.length > 0) {
+        const cert = certificates[0]
+        const detail = cert.certificates && cert.certificates.length > 0 ? cert.certificates[0] : null
+
+        certInfo.value = {
+          status: cert.status || 'unknown',
+          type: cert.type || 'Universal SSL',
+          issuer: detail?.issuer || '-',
+          signature: detail?.signature || '-'
+        }
+      } else {
+        // 如果没有证书数据，使用默认值
+        certInfo.value = {
+          status: 'active',
+          type: 'Universal SSL',
+          issuer: '-',
+          signature: '-'
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load SSL certificates:', error)
+      // 如果获取证书失败，使用默认值
+      certInfo.value = {
+        status: 'unknown',
+        type: 'Universal SSL',
+        issuer: '-',
+        signature: '-'
+      }
     }
   } catch (error: any) {
     message.error(error?.message || '加载 SSL 设置失败')

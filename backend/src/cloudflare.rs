@@ -823,4 +823,98 @@ async function handleRequest(request) {{
             content,
         })
     }
+
+    // 清除缓存
+    pub async fn purge_cache(&self, request: &PurgeCacheRequest) -> Result<PurgeCacheResponse, String> {
+        let url = format!("{}/zones/{}/purge_cache", CLOUDFLARE_API_BASE, request.zone_id);
+
+        // 构建请求体
+        let mut body = serde_json::Map::new();
+
+        if let Some(true) = request.purge_everything {
+            // 清除所有缓存
+            body.insert("purge_everything".to_string(), json!(true));
+            log::info!("Purging all cache for zone {}", request.zone_id);
+        } else if let Some(ref files) = request.files {
+            // 按 URL 清除
+            if files.len() > 30 {
+                return Err("Maximum 30 files allowed per request".to_string());
+            }
+            body.insert("files".to_string(), json!(files));
+            log::info!("Purging {} files from cache for zone {}", files.len(), request.zone_id);
+        } else if let Some(ref tags) = request.tags {
+            // 按标签清除
+            if tags.len() > 30 {
+                return Err("Maximum 30 tags allowed per request".to_string());
+            }
+            body.insert("tags".to_string(), json!(tags));
+            log::info!("Purging {} tags from cache for zone {}", tags.len(), request.zone_id);
+        } else {
+            return Err("Must specify purge_everything, files, or tags".to_string());
+        }
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let errors = json["errors"].as_array()
+                .and_then(|arr| arr.get(0))
+                .and_then(|err| err["message"].as_str())
+                .unwrap_or("Unknown error");
+            return Err(format!("API error ({}): {}", status, errors));
+        }
+
+        let result = json["result"].clone();
+        let purge_response = PurgeCacheResponse {
+            id: result["id"].as_str().unwrap_or("success").to_string(),
+        };
+
+        log::info!("Successfully purged cache for zone {}", request.zone_id);
+        Ok(purge_response)
+    }
+
+    // 获取 SSL 证书信息
+    pub async fn get_ssl_certificates(&self, zone_id: &str) -> Result<Vec<SslCertificate>, String> {
+        let url = format!("{}/zones/{}/ssl/certificate_packs", CLOUDFLARE_API_BASE, zone_id);
+
+        log::info!("Fetching SSL certificates for zone {}", zone_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let errors = json["errors"].as_array()
+                .and_then(|arr| arr.get(0))
+                .and_then(|err| err["message"].as_str())
+                .unwrap_or("Unknown error");
+            return Err(format!("API error ({}): {}", status, errors));
+        }
+
+        let certificates: Vec<SslCertificate> = serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Failed to parse SSL certificates: {}", e))?;
+
+        log::info!("Successfully fetched {} SSL certificates for zone {}", certificates.len(), zone_id);
+        Ok(certificates)
+    }
 }

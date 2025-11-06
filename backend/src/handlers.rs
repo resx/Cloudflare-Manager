@@ -229,3 +229,29 @@ pub async fn get_analytics(req: web::Json<CloudflareRequest<GetAnalyticsRequest>
         Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
     }
 }
+
+// 清除缓存
+pub async fn purge_cache(req: web::Json<CloudflareRequest<PurgeCacheRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.purge_cache(&req.data).await {
+        Ok(result) => HttpResponse::Ok().json(ApiResponse::success(result)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+// 获取 SSL 证书信息
+pub async fn get_ssl_certificates(req: web::Json<CloudflareRequest<GetSslCertificatesRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_ssl_certificates(&req.data.zone_id).await {
+        Ok(certificates) => HttpResponse::Ok().json(ApiResponse::success(certificates)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}

@@ -262,6 +262,54 @@ pub struct ContentStat {
     pub bandwidth: String,
 }
 
+// 缓存清除相关
+#[derive(Debug, Deserialize)]
+pub struct PurgeCacheRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "purgeEverything")]
+    pub purge_everything: Option<bool>,
+    pub files: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PurgeCacheResponse {
+    pub id: String,
+}
+
+// SSL 证书相关
+#[derive(Debug, Deserialize)]
+pub struct GetSslCertificatesRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SslCertificate {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub cert_type: String,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub primary_certificate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub certificates: Option<Vec<CertificateDetail>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hosts: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CertificateDetail {
+    pub id: String,
+    pub status: String,
+    pub issuer: String,
+    pub signature: String,
+    pub serial_number: String,
+    pub expires_on: String,
+    pub uploaded_on: String,
+}
+
 // API 响应
 #[derive(Debug, Serialize)]
 pub struct ApiResponse<T> {

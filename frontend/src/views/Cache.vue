@@ -271,11 +271,22 @@ async function loadCacheSettings() {
       }
     })
 
-    // TODO: 获取缓存统计数据
-    cacheStats.value = {
-      requests: 1250000,
-      cached: 1000000,
-      hitRate: 80
+    // 获取缓存统计数据（从 Analytics API）
+    try {
+      const analytics = await cloudflareApi.getAnalytics(currentZone.value.id, '24h')
+      cacheStats.value = {
+        requests: analytics.stats.totalRequests,
+        cached: analytics.timeseries.reduce((sum, point) => sum + point.cached, 0),
+        hitRate: Math.round(analytics.stats.cacheHitRate * 10) / 10
+      }
+    } catch (error) {
+      console.warn('Failed to load cache stats:', error)
+      // 如果获取统计失败，使用默认值
+      cacheStats.value = {
+        requests: 0,
+        cached: 0,
+        hitRate: 0
+      }
     }
   } catch (error: any) {
     message.error(error?.message || '加载缓存设置失败')
@@ -334,6 +345,11 @@ function handleSortQueryStringChange(value: boolean) {
 }
 
 function handlePurgeAllCache() {
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
+
   dialog.warning({
     title: '确认清除所有缓存',
     content: '此操作将清除该域名下的所有缓存文件，可能会暂时增加源服务器负载。确定继续吗？',
@@ -342,8 +358,10 @@ function handlePurgeAllCache() {
     onPositiveClick: async () => {
       purging.value = true
       try {
-        // TODO: 调用清除所有缓存的 API
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await cloudflareApi.purgeCache({
+          zone_id: currentZone.value!.id,
+          purge_everything: true
+        })
         message.success('缓存清除成功')
       } catch (error: any) {
         message.error(error?.message || '清除缓存失败')
@@ -355,6 +373,11 @@ function handlePurgeAllCache() {
 }
 
 async function handlePurgeByURL() {
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
+
   const urls = purgeURLs.value.split('\n').filter(url => url.trim())
 
   if (urls.length === 0) {
@@ -369,8 +392,10 @@ async function handlePurgeByURL() {
 
   purging.value = true
   try {
-    // TODO: 调用按 URL 清除缓存的 API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await cloudflareApi.purgeCache({
+      zone_id: currentZone.value.id,
+      files: urls
+    })
     message.success(`已清除 ${urls.length} 个 URL 的缓存`)
     showPurgeByURLModal.value = false
     purgeURLs.value = ''
@@ -382,6 +407,11 @@ async function handlePurgeByURL() {
 }
 
 async function handlePurgeByTag() {
+  if (!currentZone?.value?.id) {
+    message.error('未选择域名')
+    return
+  }
+
   const tags = purgeTags.value.split(',').map(tag => tag.trim()).filter(tag => tag)
 
   if (tags.length === 0) {
@@ -389,10 +419,17 @@ async function handlePurgeByTag() {
     return
   }
 
+  if (tags.length > 30) {
+    message.warning('最多支持 30 个标签')
+    return
+  }
+
   purging.value = true
   try {
-    // TODO: 调用按标签清除缓存的 API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await cloudflareApi.purgeCache({
+      zone_id: currentZone.value.id,
+      tags: tags
+    })
     message.success(`已清除标签 "${tags.join(', ')}" 的缓存`)
     showPurgeByTagModal.value = false
     purgeTags.value = ''

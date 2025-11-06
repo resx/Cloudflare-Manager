@@ -1,38 +1,25 @@
 version: '3.8'
 
 services:
-  # 前端服务 - Vue 3 应用
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: cf-manager-frontend
+  app:
+    container_name: cf-manager-app
+    image: registry.sao.im/moriarty/cloudflare-management-platform:latest
     restart: unless-stopped
     ports:
-      - "3000:80"
+     - "3000:80"
     environment:
-      - NODE_ENV=production
-    networks:
-      - cf-network
+     - RUST_LOG=info
+     - HOST=127.0.0.1
+     - PORT=8080
     labels:
-      - "com.cloudflare-manager.service=frontend"
-
-  # 后端服务 - Rust API
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: cf-manager-backend
-    restart: unless-stopped
-    environment:
-      - RUST_LOG=info
-      - HOST=0.0.0.0
-      - PORT=8080
-    networks:
-      - cf-network
-    labels:
-      - "com.cloudflare-manager.service=backend"
+     - "com.cloudflare-manager.service=unified-app"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
-  cf-network:
-    driver: bridge
+  default:
+    name: cf-network
