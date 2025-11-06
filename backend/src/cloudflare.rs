@@ -683,59 +683,6 @@ async function handleRequest(request) {{
         Ok(rule_id.to_string())
     }
 
-    // 获取 Workers 列表
-    pub async fn list_workers(&self, account_id: &str) -> Result<Vec<String>, String> {
-        let url = format!("{}/accounts/{}/workers/scripts", CLOUDFLARE_API_BASE, account_id);
-
-        let response = self.client
-            .get(&url)
-            .headers(self.get_headers())
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        let json: serde_json::Value = response
-            .json()
-            .await
-            .map_err(|e| format!("JSON parse failed: {}", e))?;
-
-        if !json["success"].as_bool().unwrap_or(false) {
-            return Err(format!("API error: {:?}", json["errors"]));
-        }
-
-        let workers: Vec<String> = json["result"]
-            .as_array()
-            .unwrap_or(&vec![])
-            .iter()
-            .filter_map(|w| w["id"].as_str().map(|s| s.to_string()))
-            .collect();
-
-        Ok(workers)
-    }
-
-    // 删除 Worker
-    pub async fn delete_worker(&self, account_id: &str, script_name: &str) -> Result<String, String> {
-        let url = format!("{}/accounts/{}/workers/scripts/{}", CLOUDFLARE_API_BASE, account_id, script_name);
-
-        let response = self.client
-            .delete(&url)
-            .headers(self.get_headers())
-            .send()
-            .await
-            .map_err(|e| format!("Request failed: {}", e))?;
-
-        let json: serde_json::Value = response
-            .json()
-            .await
-            .map_err(|e| format!("JSON parse failed: {}", e))?;
-
-        if !json["success"].as_bool().unwrap_or(false) {
-            return Err(format!("API error: {:?}", json["errors"]));
-        }
-
-        Ok(script_name.to_string())
-    }
-
     // 获取 Analytics 数据
     pub async fn get_analytics(&self, zone_id: &str, time_range: &str) -> Result<AnalyticsData, String> {
         use chrono::{Duration, Utc};
