@@ -27,6 +27,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Workers 管理' }
       },
       {
+        path: '/worker-templates',
+        name: 'WorkerTemplates',
+        component: () => import('@/views/WorkerTemplates.vue'),
+        meta: { title: 'Worker 模板库' }
+      },
+      {
+        path: '/workers-kv',
+        name: 'WorkersKV',
+        component: () => import('@/views/WorkersKV.vue'),
+        meta: { title: 'Workers KV' }
+      },
+      {
+        path: '/d1',
+        name: 'D1',
+        component: () => import('@/views/D1.vue'),
+        meta: { title: 'D1 数据库' }
+      },
+      {
         path: '/optimize',
         name: 'Optimize',
         component: () => import('@/views/Optimize.vue'),

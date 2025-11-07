@@ -14,6 +14,7 @@ env_logger = "0.11"
 log = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.6", features = ["v4", "serde"] }
+urlencoding = "2.1"
 
 [profile.release]
 opt-level = "z"     # 优化二进制大小

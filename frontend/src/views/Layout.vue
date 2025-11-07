@@ -288,8 +288,7 @@ const globalMenuOptions: MenuOption[] = [
   {
     label: 'D1 数据库',
     key: '/d1',
-    icon: renderIcon(FileTrayFullOutline),
-    disabled: true
+    icon: renderIcon(FileTrayFullOutline)
   },
   {
     label: 'R2 存储桶',
@@ -300,14 +299,12 @@ const globalMenuOptions: MenuOption[] = [
   {
     label: 'Workers KV',
     key: '/workers-kv',
-    icon: renderIcon(KeyOutline),
-    disabled: true
+    icon: renderIcon(KeyOutline)
   },
   {
     label: 'Worker 模板库',
     key: '/worker-templates',
-    icon: renderIcon(CodeSlashOutline),
-    disabled: true
+    icon: renderIcon(CodeSlashOutline)
   },
   {
     label: 'Cloudflare Tunnels',

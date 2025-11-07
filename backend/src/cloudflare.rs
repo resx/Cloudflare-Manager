@@ -1581,4 +1581,320 @@ async function handleRequest(request) {{
 
         Ok("Rate limit deleted successfully".to_string())
     }
+
+    // ==================== Workers KV ====================
+
+    // 列出 KV Namespaces
+    pub async fn list_kv_namespaces(&self, account_id: &str) -> Result<Vec<serde_json::Value>, String> {
+        let url = format!("{}/accounts/{}/storage/kv/namespaces", CLOUDFLARE_API_BASE, account_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let namespaces: Vec<serde_json::Value> = json["result"].as_array()
+            .map(|arr| arr.clone())
+            .unwrap_or_default();
+
+        Ok(namespaces)
+    }
+
+    // 创建 KV Namespace
+    pub async fn create_kv_namespace(&self, account_id: &str, title: &str) -> Result<serde_json::Value, String> {
+        let url = format!("{}/accounts/{}/storage/kv/namespaces", CLOUDFLARE_API_BASE, account_id);
+
+        let body = serde_json::json!({
+            "title": title
+        });
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        Ok(json["result"].clone())
+    }
+
+    // 删除 KV Namespace
+    pub async fn delete_kv_namespace(&self, account_id: &str, namespace_id: &str) -> Result<String, String> {
+        let url = format!("{}/accounts/{}/storage/kv/namespaces/{}", CLOUDFLARE_API_BASE, account_id, namespace_id);
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        Ok("KV namespace deleted successfully".to_string())
+    }
+
+    // 列出 KV 键
+    pub async fn list_kv_keys(&self, account_id: &str, namespace_id: &str, prefix: Option<&str>) -> Result<Vec<serde_json::Value>, String> {
+        let mut url = format!("{}/accounts/{}/storage/kv/namespaces/{}/keys", CLOUDFLARE_API_BASE, account_id, namespace_id);
+
+        if let Some(p) = prefix {
+            url = format!("{}?prefix={}", url, urlencoding::encode(p));
+        }
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let keys: Vec<serde_json::Value> = json["result"].as_array()
+            .map(|arr| arr.clone())
+            .unwrap_or_default();
+
+        Ok(keys)
+    }
+
+    // 读取 KV 值
+    pub async fn read_kv_value(&self, account_id: &str, namespace_id: &str, key: &str) -> Result<String, String> {
+        let url = format!("{}/accounts/{}/storage/kv/namespaces/{}/values/{}",
+            CLOUDFLARE_API_BASE, account_id, namespace_id, urlencoding::encode(key));
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("API error: HTTP {}", response.status()));
+        }
+
+        let value = response
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
+
+        Ok(value)
+    }
+
+    // 写入 KV 值
+    pub async fn write_kv_value(
+        &self,
+        account_id: &str,
+        namespace_id: &str,
+        key: &str,
+        value: &str,
+        expiration_ttl: Option<u64>,
+        metadata: Option<serde_json::Value>,
+    ) -> Result<String, String> {
+        let mut url = format!("{}/accounts/{}/storage/kv/namespaces/{}/values/{}",
+            CLOUDFLARE_API_BASE, account_id, namespace_id, urlencoding::encode(key));
+
+        // Add query parameters if provided
+        let mut params = vec![];
+        if let Some(ttl) = expiration_ttl {
+            params.push(format!("expiration_ttl={}", ttl));
+        }
+        if !params.is_empty() {
+            url = format!("{}?{}", url, params.join("&"));
+        }
+
+        let mut request_builder = self.client
+            .put(&url)
+            .headers(self.get_headers())
+            .header("Content-Type", "text/plain")
+            .body(value.to_string());
+
+        // Add metadata if provided
+        if let Some(meta) = metadata {
+            request_builder = request_builder.header("metadata", meta.to_string());
+        }
+
+        let response = request_builder
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("API error: {}", error_text));
+        }
+
+        Ok("KV value written successfully".to_string())
+    }
+
+    // 删除 KV 键
+    pub async fn delete_kv_key(&self, account_id: &str, namespace_id: &str, key: &str) -> Result<String, String> {
+        let url = format!("{}/accounts/{}/storage/kv/namespaces/{}/values/{}",
+            CLOUDFLARE_API_BASE, account_id, namespace_id, urlencoding::encode(key));
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("API error: {}", error_text));
+        }
+
+        Ok("KV key deleted successfully".to_string())
+    }
+
+    // ==================== D1 Database ====================
+
+    // 列出 D1 数据库
+    pub async fn list_d1_databases(&self, account_id: &str) -> Result<Vec<serde_json::Value>, String> {
+        let url = format!("{}/accounts/{}/d1/database", CLOUDFLARE_API_BASE, account_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        let databases: Vec<serde_json::Value> = json["result"].as_array()
+            .map(|arr| arr.clone())
+            .unwrap_or_default();
+
+        Ok(databases)
+    }
+
+    // 创建 D1 数据库
+    pub async fn create_d1_database(&self, account_id: &str, name: &str) -> Result<serde_json::Value, String> {
+        let url = format!("{}/accounts/{}/d1/database", CLOUDFLARE_API_BASE, account_id);
+
+        let body = serde_json::json!({
+            "name": name
+        });
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        Ok(json["result"].clone())
+    }
+
+    // 删除 D1 数据库
+    pub async fn delete_d1_database(&self, account_id: &str, database_id: &str) -> Result<String, String> {
+        let url = format!("{}/accounts/{}/d1/database/{}", CLOUDFLARE_API_BASE, account_id, database_id);
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        Ok("D1 database deleted successfully".to_string())
+    }
+
+    // 执行 D1 查询
+    pub async fn execute_d1_query(&self, account_id: &str, database_id: &str, query: &str) -> Result<serde_json::Value, String> {
+        let url = format!("{}/accounts/{}/d1/database/{}/query", CLOUDFLARE_API_BASE, account_id, database_id);
+
+        let body = serde_json::json!({
+            "sql": query
+        });
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            return Err(format!("API error: {:?}", json["errors"]));
+        }
+
+        // Return the first result object from the array
+        if let Some(results) = json["result"].as_array() {
+            if let Some(first_result) = results.first() {
+                return Ok(first_result.clone());
+            }
+        }
+
+        Err("No query results returned".to_string())
+    }
 }

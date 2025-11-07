@@ -356,6 +356,83 @@ export interface CreateRateLimitRequest {
   action: RateLimitAction
 }
 
+// Workers KV 相关
+export interface KVNamespace {
+  id: string
+  title: string
+  supports_url_encoding?: boolean
+}
+
+export interface KVKey {
+  name: string
+  expiration?: number
+  metadata?: any
+}
+
+export interface KVKeyValue {
+  key: string
+  value: string
+  metadata?: any
+}
+
+export interface CreateKVNamespaceRequest {
+  account_id: string
+  title: string
+}
+
+export interface WriteKVRequest {
+  account_id: string
+  namespace_id: string
+  key: string
+  value: string
+  expiration_ttl?: number
+  metadata?: any
+}
+
+export interface DeleteKVKeyRequest {
+  account_id: string
+  namespace_id: string
+  key: string
+}
+
+// D1 Database 相关
+export interface D1Database {
+  uuid: string
+  name: string
+  version: string
+  created_at: string
+}
+
+export interface D1QueryResult {
+  results: any[]
+  success: boolean
+  meta: {
+    changed_db: boolean
+    changes: number
+    duration: number
+    last_row_id: number
+    rows_read: number
+    rows_written: number
+    size_after: number
+  }
+}
+
+export interface CreateD1DatabaseRequest {
+  account_id: string
+  name: string
+}
+
+export interface DeleteD1DatabaseRequest {
+  account_id: string
+  database_id: string
+}
+
+export interface ExecuteD1QueryRequest {
+  account_id: string
+  database_id: string
+  query: string
+}
+
 export const cloudflareApi = {
   // Cloudflare 账户
   async getAccounts(): Promise<CloudflareAccount[]> {
@@ -632,6 +709,77 @@ export const cloudflareApi = {
       zone_id: zoneId,
       rate_limit_id: rateLimitId
     })
+    return res.data
+  },
+
+  // Workers KV
+  async listKVNamespaces(accountId: string): Promise<KVNamespace[]> {
+    const res = await api.post('/cloudflare/kv/namespaces', { account_id: accountId })
+    return res.data || []
+  },
+
+  async createKVNamespace(request: CreateKVNamespaceRequest): Promise<KVNamespace> {
+    const res = await api.post('/cloudflare/kv/namespaces/create', request)
+    return res.data
+  },
+
+  async deleteKVNamespace(accountId: string, namespaceId: string): Promise<string> {
+    const res = await api.post('/cloudflare/kv/namespaces/delete', {
+      account_id: accountId,
+      namespace_id: namespaceId
+    })
+    return res.data
+  },
+
+  async listKVKeys(accountId: string, namespaceId: string, prefix?: string): Promise<KVKey[]> {
+    const res = await api.post('/cloudflare/kv/keys', {
+      account_id: accountId,
+      namespace_id: namespaceId,
+      prefix: prefix
+    })
+    return res.data || []
+  },
+
+  async readKVValue(accountId: string, namespaceId: string, key: string): Promise<string> {
+    const res = await api.post('/cloudflare/kv/read', {
+      account_id: accountId,
+      namespace_id: namespaceId,
+      key: key
+    })
+    return res.data
+  },
+
+  async writeKVValue(request: WriteKVRequest): Promise<string> {
+    const res = await api.post('/cloudflare/kv/write', request)
+    return res.data
+  },
+
+  async deleteKVKey(request: DeleteKVKeyRequest): Promise<string> {
+    const res = await api.post('/cloudflare/kv/delete', request)
+    return res.data
+  },
+
+  // D1 Database
+  async listD1Databases(accountId: string): Promise<D1Database[]> {
+    const res = await api.post('/cloudflare/d1/databases', { account_id: accountId })
+    return res.data || []
+  },
+
+  async createD1Database(request: CreateD1DatabaseRequest): Promise<D1Database> {
+    const res = await api.post('/cloudflare/d1/databases/create', request)
+    return res.data
+  },
+
+  async deleteD1Database(accountId: string, databaseId: string): Promise<string> {
+    const res = await api.post('/cloudflare/d1/databases/delete', {
+      account_id: accountId,
+      database_id: databaseId
+    })
+    return res.data
+  },
+
+  async executeD1Query(request: ExecuteD1QueryRequest): Promise<D1QueryResult> {
+    const res = await api.post('/cloudflare/d1/query', request)
     return res.data
   }
 }

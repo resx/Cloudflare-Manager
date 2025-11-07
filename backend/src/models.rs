@@ -613,6 +613,99 @@ pub struct DeleteRateLimitRequest {
     pub rate_limit_id: String,
 }
 
+// Workers KV 相关
+#[derive(Debug, Deserialize)]
+pub struct ListKVNamespacesRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateKVNamespaceRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    pub title: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteKVNamespaceRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "namespaceId")]
+    pub namespace_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListKVKeysRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "namespaceId")]
+    pub namespace_id: String,
+    pub prefix: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReadKVValueRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "namespaceId")]
+    pub namespace_id: String,
+    pub key: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WriteKVValueRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "namespaceId")]
+    pub namespace_id: String,
+    pub key: String,
+    pub value: String,
+    #[serde(alias = "expirationTtl")]
+    pub expiration_ttl: Option<u64>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteKVKeyRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "namespaceId")]
+    pub namespace_id: String,
+    pub key: String,
+}
+
+// D1 Database 相关
+#[derive(Debug, Deserialize)]
+pub struct ListD1DatabasesRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateD1DatabaseRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteD1DatabaseRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "databaseId")]
+    pub database_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ExecuteD1QueryRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "databaseId")]
+    pub database_id: String,
+    pub query: String,
+}
+
 // API 响应
 #[derive(Debug, Serialize)]
 pub struct ApiResponse<T> {

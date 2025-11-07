@@ -107,6 +107,19 @@ async fn main() -> std::io::Result<()> {
                     .route("/ratelimits/create", web::post().to(handlers::create_rate_limit))
                     .route("/ratelimits/update", web::post().to(handlers::update_rate_limit))
                     .route("/ratelimits/delete", web::post().to(handlers::delete_rate_limit))
+                    // Workers KV routes
+                    .route("/kv/namespaces", web::post().to(handlers::list_kv_namespaces))
+                    .route("/kv/namespaces/create", web::post().to(handlers::create_kv_namespace))
+                    .route("/kv/namespaces/delete", web::post().to(handlers::delete_kv_namespace))
+                    .route("/kv/keys", web::post().to(handlers::list_kv_keys))
+                    .route("/kv/read", web::post().to(handlers::read_kv_value))
+                    .route("/kv/write", web::post().to(handlers::write_kv_value))
+                    .route("/kv/delete", web::post().to(handlers::delete_kv_key))
+                    // D1 Database routes
+                    .route("/d1/databases", web::post().to(handlers::list_d1_databases))
+                    .route("/d1/databases/create", web::post().to(handlers::create_d1_database))
+                    .route("/d1/databases/delete", web::post().to(handlers::delete_d1_database))
+                    .route("/d1/query", web::post().to(handlers::execute_d1_query))
             )
     })
     .bind(&bind_addr)?
