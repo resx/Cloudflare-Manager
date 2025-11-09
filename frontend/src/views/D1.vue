@@ -265,11 +265,11 @@ const resultColumns = computed<DataTableColumns<any>>(() => {
 // 获取当前账户 ID
 function getCurrentAccountId(): string | null {
   const account = accountStore.currentAccount
-  if (!account?.cloudflareAccountId) {
+  if (!account?.accountId) {
     message.error('未找到 Cloudflare 账户 ID，请先验证账户')
     return null
   }
-  return account.cloudflareAccountId
+  return account.accountId
 }
 
 async function loadDatabases() {

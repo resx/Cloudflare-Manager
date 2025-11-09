@@ -52,7 +52,7 @@ async fn main() -> std::io::Result<()> {
 
         // JSON 配置 - 增加大小限制和自定义错误处理
         let json_cfg = web::JsonConfig::default()
-            .limit(4096)
+            .limit(1024 * 1024)  // 1MB - 足够大以支持包含 API Token 的请求
             .error_handler(json_error_handler);
 
         // Payload 配置 - 设置更大的限制以支持 String 提取

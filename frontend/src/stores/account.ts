@@ -4,8 +4,6 @@ import { ref } from 'vue'
 export interface CloudflareCredentials {
   // API Token（必需） - 更安全的认证方式
   apiToken: string
-  // Account ID - 从 API 自动获取
-  accountId?: string
   alias?: string
 }
 
@@ -166,12 +164,11 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
 
-  // 获取当前凭证（返回所有可用的认证信息）
+  // 获取当前凭证（仅返回 API Token 用于认证）
   function getCurrentCredentials(): CloudflareCredentials | null {
     if (!currentAccount.value) return null
     return {
-      apiToken: currentAccount.value.apiToken,
-      accountId: currentAccount.value.accountId
+      apiToken: currentAccount.value.apiToken
     }
   }
 

@@ -648,14 +648,24 @@ pub async fn delete_rate_limit(req: web::Json<CloudflareRequest<DeleteRateLimitR
 
 // 列出 KV Namespaces
 pub async fn list_kv_namespaces(req: web::Json<CloudflareRequest<ListKVNamespacesRequest>>) -> impl Responder {
+    println!("=== List KV Namespaces Request ===");
+    println!("Account ID: {}", req.data.account_id);
+    println!("API Token length: {}", req.credentials.api_token.len());
+
     let client = match CloudflareClient::new(&req.credentials) {
         Ok(c) => c,
-        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+        Err(e) => {
+            println!("Client creation error: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e));
+        }
     };
 
     match client.list_kv_namespaces(&req.data.account_id).await {
         Ok(namespaces) => HttpResponse::Ok().json(ApiResponse::success(namespaces)),
-        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+        Err(e) => {
+            println!("API error: {}", e);
+            HttpResponse::BadRequest().json(ApiResponse::<()>::error(e))
+        }
     }
 }
 
