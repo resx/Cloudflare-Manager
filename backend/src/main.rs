@@ -83,6 +83,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/workers/list", web::post().to(handlers::list_workers))
                     .route("/workers/get", web::post().to(handlers::get_worker))
                     .route("/workers/delete", web::post().to(handlers::delete_worker))
+                    .route("/workers/upload", web::post().to(handlers::upload_worker))
                     .route("/workers/routes", web::post().to(handlers::get_worker_routes))
                     .route("/workers/routes/create", web::post().to(handlers::create_worker_route))
                     .route("/workers/routes/delete", web::post().to(handlers::delete_worker_route))

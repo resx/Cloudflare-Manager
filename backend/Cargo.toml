@@ -9,7 +9,7 @@ actix-cors = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.35", features = ["full"] }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "multipart"] }
 env_logger = "0.11"
 log = "0.4"
 chrono = { version = "0.4", features = ["serde"] }

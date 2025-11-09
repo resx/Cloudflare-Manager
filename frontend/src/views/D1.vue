@@ -68,7 +68,8 @@
       </n-spin>
     </n-card>
 
-    <!-- 创建数据库弹窗 -->\n    <n-modal v-model:show="showCreateModal" preset="card" title="创建 D1 数据库" style="width: 500px">
+    <!-- 创建数据库弹窗 -->
+    <n-modal v-model:show="showCreateModal" preset="card" title="创建 D1 数据库" style="width: 500px">
       <n-form ref="createFormRef" :model="createForm" label-placement="left" label-width="120">
         <n-form-item label="数据库名称" required>
           <n-input

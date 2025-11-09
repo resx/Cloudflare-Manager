@@ -188,6 +188,16 @@ pub struct DeleteWorkerRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct UploadWorkerRequest {
+    #[serde(alias = "accountId")]
+    pub account_id: String,
+    #[serde(alias = "scriptName")]
+    pub script_name: String,
+    #[serde(alias = "scriptContent")]
+    pub script_content: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct GetWorkerRoutesRequest {
     #[serde(alias = "zoneId")]
     pub zone_id: String,

@@ -259,6 +259,19 @@ pub async fn delete_worker(req: web::Json<CloudflareRequest<DeleteWorkerRequest>
     }
 }
 
+// 上传/更新 Worker
+pub async fn upload_worker(req: web::Json<CloudflareRequest<UploadWorkerRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.upload_worker(&req.data.account_id, &req.data.script_name, &req.data.script_content).await {
+        Ok(result) => HttpResponse::Ok().json(ApiResponse::success(result)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
 // 获取 Worker 路由列表
 pub async fn get_worker_routes(req: web::Json<CloudflareRequest<GetWorkerRoutesRequest>>) -> impl Responder {
     let client = match CloudflareClient::new(&req.credentials) {
@@ -648,24 +661,14 @@ pub async fn delete_rate_limit(req: web::Json<CloudflareRequest<DeleteRateLimitR
 
 // 列出 KV Namespaces
 pub async fn list_kv_namespaces(req: web::Json<CloudflareRequest<ListKVNamespacesRequest>>) -> impl Responder {
-    println!("=== List KV Namespaces Request ===");
-    println!("Account ID: {}", req.data.account_id);
-    println!("API Token length: {}", req.credentials.api_token.len());
-
     let client = match CloudflareClient::new(&req.credentials) {
         Ok(c) => c,
-        Err(e) => {
-            println!("Client creation error: {}", e);
-            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e));
-        }
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
     };
 
     match client.list_kv_namespaces(&req.data.account_id).await {
         Ok(namespaces) => HttpResponse::Ok().json(ApiResponse::success(namespaces)),
-        Err(e) => {
-            println!("API error: {}", e);
-            HttpResponse::BadRequest().json(ApiResponse::<()>::error(e))
-        }
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
     }
 }
 
@@ -797,13 +800,24 @@ pub async fn delete_d1_database(req: web::Json<CloudflareRequest<DeleteD1Databas
 
 // 执行 D1 查询
 pub async fn execute_d1_query(req: web::Json<CloudflareRequest<ExecuteD1QueryRequest>>) -> impl Responder {
+    log::info!("=== Execute D1 Query Request ===");
+    log::info!("Account ID: {}", req.data.account_id);
+    log::info!("Database ID: {}", req.data.database_id);
+    log::info!("Query: {}", req.data.query);
+
     let client = match CloudflareClient::new(&req.credentials) {
         Ok(c) => c,
-        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+        Err(e) => {
+            log::error!("Client creation error: {}", e);
+            return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e));
+        }
     };
 
     match client.execute_d1_query(&req.data.account_id, &req.data.database_id, &req.data.query).await {
         Ok(result) => HttpResponse::Ok().json(ApiResponse::success(result)),
-        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+        Err(e) => {
+            log::error!("D1 query error: {}", e);
+            HttpResponse::BadRequest().json(ApiResponse::<()>::error(e))
+        }
     }
 }

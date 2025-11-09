@@ -57,6 +57,24 @@ api.interceptors.response.use(
         if (data.error) {
           errorMessage = data.error
 
+          // 检测是否是 API Token 权限问题
+          const authErrorKeywords = [
+            'Authentication error',
+            'code": Number(10000)',
+            'authentication failed',
+            'invalid token',
+            'unauthorized'
+          ]
+
+          const isAuthError = authErrorKeywords.some(keyword =>
+            errorMessage.toLowerCase().includes(keyword.toLowerCase())
+          )
+
+          if (isAuthError) {
+            errorMessage = 'API Token 权限不足。请确保您的 API Token 包含所需的权限。\n\n常见权限问题：\n• Workers KV: 需要 "Workers KV Storage - Edit"\n• D1 数据库: 需要 "D1 - Edit"\n• Workers 管理: 需要 "Workers Scripts - Edit"\n\n请访问 Cloudflare Dashboard > Profile > API Tokens 更新权限。'
+            isFeatureLimited = true
+          }
+
           // 检测是否是套餐限制或权限问题
           const limitKeywords = [
             'entitlement',
@@ -75,7 +93,7 @@ api.interceptors.response.use(
 
           isFeatureLimited = limitKeywords.some(keyword =>
             errorMessage.toLowerCase().includes(keyword)
-          )
+          ) || isFeatureLimited
         }
       }
 
@@ -527,6 +545,16 @@ export const cloudflareApi = {
     const res = await api.post('/cloudflare/workers/delete', {
       account_id: accountId,
       script_name: scriptName
+    })
+    return res.data
+  },
+
+  // 上传/更新 Worker
+  async uploadWorker(accountId: string, scriptName: string, scriptContent: string): Promise<any> {
+    const res = await api.post('/cloudflare/workers/upload', {
+      account_id: accountId,
+      script_name: scriptName,
+      script_content: scriptContent
     })
     return res.data
   },

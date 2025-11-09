@@ -29,7 +29,7 @@ impl CloudflareClient {
         // 使用 Bearer Token 认证
         headers.insert(
             header::AUTHORIZATION,
-            header::HeaderValue::from_str(&format!("Bearer {}", self.credentials.api_token))
+            header::HeaderValue::from_str(&format!("Bearer {}", self.credentials.api_token.trim()))
                 .unwrap_or_else(|_| header::HeaderValue::from_static(""))
         );
 
@@ -363,6 +363,53 @@ async function handleRequest(request) {{
         }
 
         Ok(format!("Worker {} deleted successfully", script_name))
+    }
+
+    // 上传/更新 Worker
+    pub async fn upload_worker(&self, account_id: &str, script_name: &str, script_content: &str) -> Result<serde_json::Value, String> {
+        let url = format!("{}/accounts/{}/workers/scripts/{}", CLOUDFLARE_API_BASE, account_id, script_name);
+
+        log::info!("Uploading Worker script {} to account {}", script_name, account_id);
+
+        let metadata = serde_json::json!({
+            "main_module": "worker.js",
+            "compatibility_date": "2024-01-01"
+        });
+
+        let form = reqwest::multipart::Form::new()
+            .text("metadata", metadata.to_string())
+            .part(
+                "worker.js",
+                reqwest::multipart::Part::text(script_content.to_string())
+                    .mime_str("application/javascript+module")
+                    .map_err(|e| format!("Failed to set MIME type: {}", e))?
+            );
+
+        let response = self.client
+            .put(&url)
+            .headers(self.get_headers())
+            .multipart(form)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let errors = json["errors"].as_array()
+                .and_then(|arr| arr.get(0))
+                .and_then(|err| err["message"].as_str())
+                .unwrap_or("Unknown error");
+            log::error!("Worker upload failed ({}): {}", status, errors);
+            return Err(format!("API error ({}): {}", status, errors));
+        }
+
+        log::info!("Successfully uploaded Worker script {}", script_name);
+        Ok(json["result"].clone())
     }
 
     // 获取 Worker 路由列表
@@ -1871,6 +1918,9 @@ async function handleRequest(request) {{
             "sql": query
         });
 
+        println!("D1 Query URL: {}", url);
+        println!("D1 Query Body: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+
         let response = self.client
             .post(&url)
             .headers(self.get_headers())
@@ -1879,10 +1929,15 @@ async function handleRequest(request) {{
             .await
             .map_err(|e| format!("Request failed: {}", e))?;
 
+        let status = response.status();
+        println!("D1 Query Response Status: {}", status);
+
         let json: serde_json::Value = response
             .json()
             .await
             .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        println!("D1 Query Response: {}", serde_json::to_string_pretty(&json).unwrap_or_default());
 
         if !json["success"].as_bool().unwrap_or(false) {
             return Err(format!("API error: {:?}", json["errors"]));

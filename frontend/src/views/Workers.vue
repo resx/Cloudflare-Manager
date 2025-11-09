@@ -454,12 +454,20 @@ async function handleConfirmWorker() {
 
   uploading.value = true
   try {
-    // Cloudflare API 需要通过 PUT 请求上传 Worker 脚本
-    // 由于当前API结构限制，我们需要添加上传Worker的API
-    message.warning('Worker 上传功能需要后端支持，正在开发中...')
-    // TODO: 调用上传 Worker API
+    await cloudflareApi.uploadWorker(
+      currentAccount.value.accountId,
+      workerForm.value.name,
+      workerForm.value.script
+    )
+
+    message.success('Worker 上传成功')
+    showWorkerModal.value = false
+    workerForm.value = { name: '', script: '' }
+
+    // 刷新 Worker 列表
+    await loadWorkers()
   } catch (error: any) {
-    message.error(error?.message || '操作失败')
+    message.error(error?.message || '上传 Worker 失败')
   } finally {
     uploading.value = false
   }
