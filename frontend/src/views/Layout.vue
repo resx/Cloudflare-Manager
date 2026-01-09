@@ -31,8 +31,47 @@
 
         <!-- Zone Menu Section -->
         <div v-if="zones.length > 0">
-          <div v-if="!collapsed" class="section-title">{{ currentZone?.name || '域名' }}</div>
-          <a
+          <!-- Domain Selector Dropdown -->
+          <div v-if="!collapsed" class="section-title flex items-center justify-between">
+            <span class="truncate flex-1">{{ currentZone?.name || '选择域名' }}</span>
+            <!-- Multi-zone dropdown -->
+            <div v-if="zones.length > 1" class="relative">
+              <button 
+                @click="showZoneDropdown = !showZoneDropdown"
+                class="text-primary hover:text-primary/80 transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+              
+              <!-- Dropdown menu -->
+              <div 
+                v-if="showZoneDropdown" 
+                class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-border z-50"
+                @click.stop
+              >
+                <div class="py-1 max-h-64 overflow-y-auto">
+                  <button
+                    v-for="zone in zones"
+                    :key="zone.id"
+                    @click="selectZone(zone.id)"
+                    :class="[
+                      'w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between',
+                      currentZone?.id === zone.id ? 'bg-accent text-accent-foreground font-medium' : 'text-foreground'
+                    ]"
+                  >
+                    <span class="truncate">{{ zone.name }}</span>
+                    <svg v-if="currentZone?.id === zone.id" class="w-4 h-4 ml-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <
             v-for="item in zoneMenuItems"
             :key="item.path"
             @click.prevent="router.push(item.path)"
@@ -147,6 +186,7 @@ const themeStore = useThemeStore()
 
 const collapsed = ref(false)
 const showAccountModal = ref(false)
+const showZoneDropdown = ref(false)
 const zones = ref<Zone[]>([])
 const currentZone = ref<Zone | null>(null)
 
@@ -184,6 +224,16 @@ const zoneMenuItems = computed(() => {
 })
 
 const currentTitle = computed(() => route.meta.title as string || 'Home')
+
+function selectZone(zoneId: string) {
+  const zone = zones.value.find(z => z.id === zoneId)
+  if (zone) {
+    currentZone.value = zone
+    localStorage.setItem('currentZoneId', zone.id)
+    showZoneDropdown.value = false
+    console.log('Switched to zone:', zone.name)
+  }
+}
 
 async function loadZones() {
   if (!accountStore.currentAccount) return
@@ -248,4 +298,29 @@ watch(() => accountStore.currentAccount, () => {
 }
 
 /* Navigation items are styled via island-theme.css .nav-item class */
+
+/* Custom scrollbar for sidebar navigation - matches Island Theme background */
+nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+nav::-webkit-scrollbar-track {
+  background: transparent; /* Transparent to match sidebar background */
+}
+
+nav::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1); /* Very subtle gray */
+  border-radius: 3px;
+}
+
+nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2); /* Slightly darker on hover */
+}
+
+/* Firefox scrollbar */
+nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
 </style>
+
