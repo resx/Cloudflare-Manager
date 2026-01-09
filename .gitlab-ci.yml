@@ -7,9 +7,12 @@ services:
 
 # 定义构建前的全局变量
 variables:
+  # Docker 连接配置 - 修复 "Cannot connect to Docker daemon" 错误
+  DOCKER_HOST: tcp://docker:2375
   # Docker 构建优化
   DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: "/certs"
+  # 禁用 TLS 以简化 DinD 配置（如果需要安全性，设置为 "/certs"）
+  DOCKER_TLS_CERTDIR: ""
   # 镜像命名规则（统一镜像）
   APP_IMAGE: $CI_REGISTRY_IMAGE
 
