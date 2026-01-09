@@ -1,23 +1,39 @@
 version: '3.8'
+
+# Cloudflare Management Platform - Production Deployment
+# 使用 GitLab Registry 预构建镜像，快速部署
+# 访问地址: http://localhost:3000
+
 services:
+  # 统一应用服务（前端 + 后端 + Nginx）
   app:
     container_name: cf-manager-app
+    # 从 GitLab Container Registry 拉取最新镜像
     image: registry.sao.im/moriarty/cloudflare-management-platform:latest
     restart: unless-stopped
+    
     ports:
-     - "3000:80"
+      - "3000:80"  # HTTP 端口，可修改为其他端口如 8080:80
+    
     environment:
-     - RUST_LOG=info
-     - HOST=127.0.0.1
-     - PORT=8080
+      # Rust 后端配置
+      - RUST_LOG=info              # 日志级别: debug/info/warn/error
+      - HOST=127.0.0.1             # 后端监听地址（容器内部）
+      - PORT=8080                  # 后端监听端口（容器内部）
+    
     labels:
-     - "com.cloudflare-manager.service=unified-app"
+      - "com.cloudflare-manager.service=unified-app"
+      - "com.cloudflare-manager.version=island-theme"
+    
+    # 健康检查配置
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      interval: 30s      # 检查间隔
+      timeout: 10s       # 超时时间
+      retries: 3         # 失败重试次数
+      start_period: 40s  # 启动等待时间
+
+# 网络配置
 networks:
   default:
     name: cf-network

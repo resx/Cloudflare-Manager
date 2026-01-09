@@ -1,31 +1,56 @@
 version: '3.8'
 
+# Cloudflare Management Platform - Unified Build
+# 本地构建完整镜像（前端 + 后端 + Nginx）
+# 适用于开发和本地部署
+# 访问地址: http://localhost:3000
+
 services:
-  # 统一应用服务（前端 + 后端 + nginx）
+  # 统一应用服务（前端Island Theme + Rust后端 + Nginx）
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      # 构建参数（可选）
+      # args:
+      #   - NODE_ENV=production
+    
     container_name: cf-manager-app
     restart: unless-stopped
+    
     ports:
-      # 只需要暴露一个端口
-      - "3000:80"
+      - "3000:80"  # HTTP 端口，可修改为其他端口如 8080:80
+      # 如需 HTTPS，添加 443:443 并配置 SSL 证书
+    
     environment:
-      # 后端环境变量
-      - RUST_LOG=info
-      - HOST=127.0.0.1
-      - PORT=8080
+      # Rust 后端环境变量
+      - RUST_LOG=info              # 日志级别: debug/info/warn/error
+      - HOST=127.0.0.1             # 后端监听地址（容器内部）
+      - PORT=8080                  # 后端监听端口（容器内部）
+    
     labels:
       - "com.cloudflare-manager.service=unified-app"
-    # 健康检查
+      - "com.cloudflare-manager.version=island-theme"
+      - "com.cloudflare-manager.ui=tailwind-css"
+    
+    # 健康检查配置
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      interval: 30s      # 每30秒检查一次
+      timeout: 10s       # 10秒超时
+      retries: 3         # 失败3次后标记为不健康
+      start_period: 40s  # 启动后40秒才开始检查
+    
+    # 可选：挂载卷以持久化数据
+    # volumes:
+    #   - ./data:/app/data
 
+# 网络配置
 networks:
   default:
     name: cf-network
+    # 可选：自定义网络配置
+    # driver: bridge
+    # ipam:
+    #   config:
+    #     - subnet: 172.25.0.0/16
