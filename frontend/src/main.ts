@@ -4,6 +4,9 @@ import naive from 'naive-ui'
 import App from './App.vue'
 import router from './router'
 
+// Import Island Theme styles
+import './styles/island-theme.css'
+
 const app = createApp(App)
 
 app.use(createPinia())
