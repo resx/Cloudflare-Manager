@@ -1,35 +1,39 @@
-# 使用 docker:latest 镜像来执行此任务
-image: docker:latest
+# 使用明确的 Docker CLI 版本（避免镜像冲突）
+image: docker:24.0.7-cli
 
-services:
-  # 启动一个 Docker-in-Docker 服务
-  - docker:dind
-
-# 定义构建前的全局变量
+# 全局变量配置
 variables:
-  # Docker 连接配置 - 修复 "Cannot connect to Docker daemon" 错误
-  DOCKER_HOST: tcp://docker:2375
-  # Docker 构建优化
-  DOCKER_DRIVER: overlay2
-  # 禁用 TLS 以简化 DinD 配置（如果需要安全性，设置为 "/certs"）
+  # 显式禁用 TLS，防止证书生成失败导致连接被拒
   DOCKER_TLS_CERTDIR: ""
-  # 镜像命名规则（统一镜像）
+  DOCKER_HOST: "tcp://docker:2375"
+  # 使用 overlay2 驱动以获得最佳性能
+  DOCKER_DRIVER: overlay2
+  # 镜像命名规则
   APP_IMAGE: $CI_REGISTRY_IMAGE
 
-# 定义阶段
+# Docker-in-Docker 服务配置
+services:
+  - name: docker:24.0.7-dind  # 明确使用服务端镜像
+    alias: docker
+    # 显式关闭 TLS 验证，并开启 MTU 调整（防止大包丢包）
+    command: ["--tls=false", "--storage-driver=overlay2", "--mtu=1400"]
+
+# 定义构建阶段
 stages:
   - build
 
-# 全局 before_script - 登录到 GitLab Registry
-before_script:
-  - echo "Logging in to $CI_REGISTRY..."
-  - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
-
-# 构建统一镜像（前端 + 后端 + nginx）
+# 构建统一镜像任务
 build_image:
   stage: build
+  before_script:
+    # 调试命令：打印版本确保分离成功
+    - docker --version
+    - docker info
+    # 登录到 GitLab Container Registry
+    - echo "Logging in to $CI_REGISTRY..."
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
   script:
-    # 构建统一镜像
+    # 构建统一镜像（前端 + 后端 + nginx）
     - echo "Building unified application image (frontend + backend + nginx)..."
     - docker build -t $APP_IMAGE:$CI_COMMIT_SHA .
     - docker tag $APP_IMAGE:$CI_COMMIT_SHA $APP_IMAGE:latest
@@ -59,13 +63,10 @@ build_image:
       if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
         echo "  - $APP_IMAGE:stable"
       fi
-  tags:
-    - docker
   only:
     - main
     - develop
     - tags
-
-# 可选：清理旧的 Docker 镜像和容器
-after_script:
-  - docker system prune -f
+  after_script:
+    # 可选：清理旧的 Docker 镜像和容器
+    - docker system prune -f || true
