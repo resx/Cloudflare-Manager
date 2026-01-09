@@ -1,123 +1,110 @@
 <template>
-  <n-space vertical :size="24">
-    <n-card title="域名列表">
-      <template #header-extra>
-        <n-button type="primary" disabled>
-          添加域名
-        </n-button>
-      </template>
+  <!-- Zones Management - Island Theme -->
+  <div class="animate-in">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-semibold">域名列表</h1>
+        <p class="text-sm text-muted-foreground mt-1">管理您的 Cloudflare 域名</p>
+      </div>
+      <button class="btn-island-primary" disabled title="功能开发中">
+        添加域名
+      </button>
+    </div>
 
-      <n-spin :show="loading">
-        <n-data-table
-          :columns="columns"
-          :data="zones"
-          :pagination="{ pageSize: 10 }"
-          :bordered="false"
-        />
-      </n-spin>
-    </n-card>
-  </n-space>
+    <!-- Loading State -->
+    <div v-if="loading" class="metric-card p-12 text-center">
+      <div class="text-4xl mb-4">⏳</div>
+      <p class="text-muted-foreground">加载域名列表...</p>
+    </div>
+
+    <!-- Zones Table -->
+    <div v-else-if="zones.length > 0" class="metric-card p-6">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="text-left py-3 px-4 text-sm font-semibold text-foreground">域名</th>
+              <th class="text-left py-3 px-4 text-sm font-semibold text-foreground">状态</th>
+              <th class="text-left py-3 px-4 text-sm font-semibold text-foreground">套餐</th>
+              <th class="text-left py-3 px-4 text-sm font-semibold text-foreground">NS 服务器</th>
+              <th class="text-center py-3 px-4 text-sm font-semibold text-foreground">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr 
+              v-for="zone in zones" 
+              :key="zone.id"
+              class="border-b border-border last:border-b-0 hover:bg-muted transition-colors"
+            >
+              <td class="py-3 px-4">
+                <div class="font-medium text-sm">{{ zone.name }}</div>
+                <div class="text-xs text-muted-foreground">ID: {{ zone.id.substring(0, 8) }}...</div>
+              </td>
+              <td class="py-3 px-4">
+                <span :class="[
+                  'px-2 py-1 text-xs rounded-full',
+                  zone.status === 'active' 
+                    ? 'bg-success text-success-foreground' 
+                    : 'bg-muted text-muted-foreground'
+                ]">
+                  {{ zone.status }}
+                </span>
+              </td>
+              <td class="py-3 px-4">
+                <span class="text-sm">{{ zone.plan?.name || 'Free' }}</span>
+              </td>
+              <td class="py-3 px-4">
+                <div class="text-xs text-muted-foreground space-y-1">
+                  <div v-for="ns in zone.name_servers?.slice(0, 2)" :key="ns">{{ ns }}</div>
+                </div>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <button
+                  @click="goToZoneDetail(zone)"
+                  class="btn-island-secondary text-xs h-8"
+                >
+                  管理
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else class="metric-card p-12 text-center">
+      <div class="text-5xl mb-4">🌐</div>
+      <h3 class="font-semibold mb-2">暂无域名</h3>
+      <p class="text-sm text-muted-foreground">请在 Cloudflare 控制台添加域名</p>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, h } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage, NButton, NSpace, NTag } from 'naive-ui'
 import { cloudflareApi, type Zone } from '@/api'
-import { useAccountStore } from '@/stores/account'
 
 const router = useRouter()
-const message = useMessage()
-const accountStore = useAccountStore()
-
 const loading = ref(false)
 const zones = ref<Zone[]>([])
 
-const columns = [
-  { title: '域名', key: 'name', minWidth: 200 },
-  {
-    title: '状态',
-    key: 'status',
-    width: 100,
-    render: (row: Zone) =>
-      h(
-        NTag,
-        {
-          type: row.status === 'active' ? 'success' : 'warning',
-          size: 'small'
-        },
-        { default: () => (row.status === 'active' ? '活跃' : row.status) }
-      )
-  },
-  {
-    title: 'NS 服务器',
-    key: 'name_servers',
-    render: (row: Zone) =>
-      h(
-        'div',
-        { style: { fontSize: '12px', color: '#666' } },
-        row.name_servers.join(', ')
-      )
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    render: (row: Zone) =>
-      h(
-        NSpace,
-        {},
-        {
-          default: () => [
-            h(
-              NButton,
-              {
-                size: 'small',
-                onClick: () => {
-                  // 设置当前域名
-                  console.log('Setting currentZoneId to:', row.id, 'Zone name:', row.name)
-                  localStorage.setItem('currentZoneId', row.id)
-                  router.push('/dns')
-                }
-              },
-              { default: () => 'DNS 记录' }
-            ),
-            h(
-              NButton,
-              {
-                size: 'small',
-                onClick: () => {
-                  // 设置当前域名
-                  console.log('Setting currentZoneId to:', row.id, 'Zone name:', row.name)
-                  localStorage.setItem('currentZoneId', row.id)
-                  router.push('/firewall')
-                }
-              },
-              { default: () => '防火墙' }
-            )
-          ]
-        }
-      )
-  }
-]
-
 async function loadZones() {
-  if (!accountStore.currentAccount) {
-    message.warning('请先添加账户')
-    return
-  }
-
   loading.value = true
   try {
     zones.value = await cloudflareApi.getZones()
-    if (zones.value.length === 0) {
-      message.info('当前账户下没有域名')
-    }
-  } catch (error: any) {
-    message.error(error?.message || '加载域名列表失败')
+  } catch (error) {
+    console.error('Failed to load zones:', error)
   } finally {
     loading.value = false
   }
+}
+
+function goToZoneDetail(zone: Zone) {
+  localStorage.setItem('currentZoneId', zone.id)
+  router.push('/dns')
 }
 
 onMounted(() => {

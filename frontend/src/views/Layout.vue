@@ -71,7 +71,8 @@
             </div>
           </div>
           
-          <
+          <!-- Zone menu items -->
+          <a
             v-for="item in zoneMenuItems"
             :key="item.path"
             @click.prevent="router.push(item.path)"
