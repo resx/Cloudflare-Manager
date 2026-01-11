@@ -242,9 +242,28 @@ const currentTitle = computed(() => route.meta.title as string || 'Home')
 function toggleZoneDropdown() {
   if (!showZoneDropdown.value && dropdownButton.value) {
     const rect = dropdownButton.value.getBoundingClientRect()
-    dropdownPosition.value = {
-      x: rect.left,
-      y: rect.bottom + 8 // 8px below button
+    const viewportHeight = window.innerHeight
+    const dropdownHeight = 420 // max-height of dropdown
+    
+    // Calculate available space below and above the button
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+    
+    // Decide whether to open upward or downward
+    const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
+    
+    if (openUpward) {
+      // Position above the button
+      dropdownPosition.value = {
+        x: rect.left,
+        y: rect.top - Math.min(dropdownHeight, spaceAbove - 8) // 8px gap
+      }
+    } else {
+      // Position below the button
+      dropdownPosition.value = {
+        x: rect.left,
+        y: rect.bottom + 8 // 8px below button
+      }
     }
   }
   showZoneDropdown.value = !showZoneDropdown.value
