@@ -6,10 +6,18 @@
         <h1 class="text-2xl font-semibold">账户管理</h1>
         <p class="text-sm text-muted-foreground mt-1">管理您的 Cloudflare API 账户</p>
       </div>
-      <button class="btn-island-primary" @click="showAddModal = true">
-        <span class="text-lg mr-2">+</span>
-        添加账户
-      </button>
+      <div class="flex gap-3">
+        <button class="btn-island-secondary text-sm" @click="exportAccounts">
+          📤 导出
+        </button>
+        <button class="btn-island-secondary text-sm" @click="showImportModal = true">
+          📥 导入
+        </button>
+        <button class="btn-island-primary" @click="showAddModal = true">
+          <span class="text-lg mr-2">+</span>
+          添加账户
+        </button>
+      </div>
     </div>
 
     <!-- Accounts Grid -->
@@ -107,7 +115,7 @@
           <div>
             <label class="block text-sm font-medium mb-2">API Token *</label>
             <input
-              v-model="newAccount.apiToken"
+              v-model="accountForm.apiToken"
               type="password"
               class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="输入您的 Cloudflare API Token"
@@ -117,7 +125,7 @@
           <div>
             <label class="block text-sm font-medium mb-2">别名 *</label>
             <input
-              v-model="newAccount.alias"
+              v-model="accountForm.alias"
               class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="为账户设置一个别名，例如：公司账户"
             />
@@ -130,16 +138,44 @@
         </div>
       </div>
     </div>
+
+    <!-- Import Modal -->
+    <div v-if="showImportModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showImportModal = false">
+      <div class="bg-white rounded-2xl shadow-lg w-full max-w-xl" @click.stop>
+        <div class="p-6 border-b border-border">
+          <h2 class="text-xl font-semibold">导入账户</h2>
+        </div>
+        
+        <div class="p-6">
+          <label class="block text-sm font-medium mb-2">JSON 数据</label>
+          <textarea
+            v-model="importText"
+            class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+            rows="10"
+            placeholder='粘贴导出的 JSON 数据'
+          ></textarea>
+        </div>
+
+        <div class="p-6 border-t border-border flex justify-end gap-3">
+          <button class="btn-island-secondary" @click="showImportModal = false">取消</button>
+          <button class="btn-island-primary" @click="handleImport">导入</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAccountStore } from '@/stores/account'
+import { toast } from '@/utils/toast'
 
 const accountStore = useAccountStore()
 const showAddModal = ref(false)
-const newAccount = ref({
+const showImportModal = ref(false)
+const importText = ref('')
+
+const accountForm = ref({
   apiToken: '',
   alias: ''
 })
@@ -158,28 +194,69 @@ function maskToken(token: string): string {
 
 function switchAccount(accountId: string) {
   accountStore.switchAccount(accountId)
+  toast.success('已切换账户')
 }
 
 async function deleteAccount(accountId: string) {
   if (confirm('确定要删除这个账户吗？')) {
     accountStore.removeAccount(accountId)
+    toast.success('账户已删除')
   }
 }
 
 async function handleAddAccount() {
-  if (!newAccount.value.apiToken.trim() || !newAccount.value.alias.trim()) {
-    alert('请填写所有必填字段')
+  if (!accountForm.value.apiToken.trim() || !accountForm.value.alias.trim()) {
+    toast.warning('请填写所有必填字段')
     return
   }
 
   const account = await accountStore.addAccount({
-    apiToken: newAccount.value.apiToken,
-    alias: newAccount.value.alias
+    apiToken: accountForm.value.apiToken,
+    alias: accountForm.value.alias
   })
 
   if (account) {
     showAddModal.value = false
-    newAccount.value = { apiToken: '', alias: '' }
+    accountForm.value = { apiToken: '', alias: '' }
+    toast.success('账户添加成功')
+  }
+}
+
+function exportAccounts() {
+  const data = JSON.stringify(accountStore.accounts, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `cloudflare-accounts-${Date.now()}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  toast.success('账户已导出')
+}
+
+function handleImport() {
+  try {
+    const accounts = JSON.parse(importText.value)
+    if (!Array.isArray(accounts)) {
+      toast.error('无效的JSON格式')
+      return
+    }
+    
+    let imported = 0
+    accounts.forEach(acc => {
+      if (acc.apiToken && acc.alias) {
+        accountStore.addAccount(acc)
+        imported++
+      }
+    })
+    
+    showImportModal.value = false
+    importText.value = ''
+    toast.success(`成功导入 ${imported} 个账户`)
+  } catch (error) {
+    toast.error('导入失败：JSON 格式错误')
   }
 }
 </script>

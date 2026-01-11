@@ -103,8 +103,10 @@ async function loadZones() {
 }
 
 function goToZoneDetail(zone: Zone) {
+  // Set the zone in localStorage AND update parent's currentZone
   localStorage.setItem('currentZoneId', zone.id)
-  router.push('/dns')
+  // Trigger a page reload or emit event to update parent
+  window.location.href = '/dns'
 }
 
 onMounted(() => {

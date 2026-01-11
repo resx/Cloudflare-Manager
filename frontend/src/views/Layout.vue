@@ -30,10 +30,10 @@
         </div>
 
         <!-- Zone Menu Section -->
-        <div v-if="zones.length > 0">
+        <div v-if="zones.length > 0" class="relative">
           <!-- Domain Selector Dropdown -->
           <div v-if="!collapsed" class="section-title flex items-center justify-between">
-            <span class="truncate flex-1">{{ currentZone?.name || '选择域名' }}</span>
+            <span class="truncate flex-1 max-w-[150px]" :title="currentZone?.name">{{ currentZone?.name || '选择域名' }}</span>
             <!-- Multi-zone dropdown -->
             <div v-if="zones.length > 1" class="relative">
               <button 
@@ -45,23 +45,24 @@
                 </svg>
               </button>
               
-              <!-- Dropdown menu -->
+              <!-- Dropdown menu - Fixed positioning -->
               <div 
                 v-if="showZoneDropdown" 
-                class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-border z-50"
+                class="fixed bg-white rounded-lg shadow-xl border border-border"
+                style="z-index: 9999; min-width: 250px; max-height: 400px; overflow-y: auto; margin-left: -200px; margin-top: 8px;"
                 @click.stop
               >
-                <div class="py-1 max-h-64 overflow-y-auto">
+                <div class="py-1">
                   <button
                     v-for="zone in zones"
                     :key="zone.id"
                     @click="selectZone(zone.id)"
                     :class="[
-                      'w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between',
+                      'w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors flex items-center justify-between',
                       currentZone?.id === zone.id ? 'bg-accent text-accent-foreground font-medium' : 'text-foreground'
                     ]"
                   >
-                    <span class="truncate">{{ zone.name }}</span>
+                    <span class="truncate pr-2">{{ zone.name }}</span>
                     <svg v-if="currentZone?.id === zone.id" class="w-4 h-4 ml-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                     </svg>
