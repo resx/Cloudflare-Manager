@@ -134,6 +134,8 @@ import { ref, onMounted, computed, watch, inject, type Ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import { cloudflareApi, type Zone } from '@/api'
 import { useAccountStore } from '@/stores/account'
+import { toast } from '@/utils/toast'
+import { logHistory } from '@/utils/history'
 
 const message = useMessage()
 const accountStore = useAccountStore()
@@ -269,7 +271,8 @@ async function updateSetting(id: string, value: any) {
   updating.value = true
   try {
     await cloudflareApi.updateZoneSettings(currentZone.value.id, [{ id, value }])
-    message.success('设置已更新')
+    logHistory.ssl('更新 SSL/TLS 设置', `模式：${sslMode.value}，TLS版本：${minTlsVersion.value}`)
+    toast.success('SSL 设置已更新')
   } catch (error: any) {
     message.error(error?.message || '更新设置失败')
     // 重新加载设置以恢复旧值

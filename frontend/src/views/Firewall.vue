@@ -147,7 +147,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, h, watch, inject, type Ref } from 'vue'
 import { useMessage, NButton, NSpace, NTag, NCode } from 'naive-ui'
-import { cloudflareApi, type Zone, type FirewallRule } from '@/api'
+import { cloudflareApi, type FirewallRule, type Zone } from '@/api'
+import { toast } from '@/utils/toast'
+import { logHistory } from '@/utils/history'
 import { useAccountStore } from '@/stores/account'
 
 const accountStore = useAccountStore()
@@ -354,7 +356,8 @@ async function handleAddRule() {
       paused: ruleForm.value.paused
     })
 
-    message.success('防火墙规则添加成功')
+    logHistory.firewall('创建防火墙规则', ruleForm.value.description || '新规则')
+    toast.success('防火墙规则已创建')
     showAddModal.value = false
     ruleForm.value = {
       description: '',
@@ -364,7 +367,7 @@ async function handleAddRule() {
     }
     await loadFirewallRules()
   } catch (error: any) {
-    message.error(error?.message || '添加失败')
+    message.error(error?.message || '删除失败')
   } finally {
     submitting.value = false
   }

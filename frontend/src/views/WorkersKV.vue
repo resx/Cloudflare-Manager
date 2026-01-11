@@ -115,6 +115,7 @@ import { ref, onMounted } from 'vue'
 import { useAccountStore } from '@/stores/account'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'
+import { logHistory } from '@/utils/history'
 
 interface KVNamespace {
   id: string
@@ -168,6 +169,7 @@ async function createNamespace() {
       account_id: accountId,
       title: newNamespace.value.title
     })
+    logHistory.worker('创建 KV 命名空间', `命名空间: ${newNamespace.value.title}`)
     toast.success('命名空间已创建')
     showCreateModal.value = false
     newNamespace.value = { title: '' }
@@ -189,6 +191,7 @@ async function deleteNamespace(ns: KVNamespace) {
 
   try {
     await cloudflareApi.deleteKVNamespace(accountId, ns.id)
+    logHistory.worker('删除 KV 命名空间', `命名空间: ${ns.title}`)
     toast.success('命名空间已删除')
     loadNamespaces()
   } catch (error) {

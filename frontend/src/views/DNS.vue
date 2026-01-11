@@ -218,12 +218,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, h, watch, inject, type Ref } from 'vue'
-import { useMessage, NButton, NSpace, NTag, NSwitch } from 'naive-ui'
+import { NButton, NSpace, NTag, NSwitch } from 'naive-ui'
 import { cloudflareApi, type Zone, type DnsRecord } from '@/api'
-import { useAccountStore } from '@/stores/account'
-
-const accountStore = useAccountStore()
-const message = useMessage()
+import { toast } from '@/utils/toast'
+import { logHistory } from '@/utils/history'
 
 // 从 Layout 获取当前域名
 const currentZone = inject<Ref<Zone | null>>('currentZone')
@@ -408,7 +406,7 @@ async function loadDnsRecords() {
       zone_id: currentZone.value!.id
     }))
   } catch (error) {
-    message.error('加载 DNS 记录失败')
+    toast.error('加载 DNS 记录失败')
   } finally {
     loadingRecords.value = false
   }
@@ -416,7 +414,7 @@ async function loadDnsRecords() {
 
 async function handleAddRecord() {
   if (!currentZone?.value?.id) {
-    message.error('未选择域名')
+    toast.error('未选择域名')
     return
   }
 
@@ -435,8 +433,8 @@ async function handleAddRecord() {
     }
 
     await cloudflareApi.createDnsRecord(recordToAdd)
-
-    message.success('DNS 记录添加成功')
+    logHistory.dns('添加 DNS 记录', `${dnsForm.value.type} 记录：${dnsForm.value.name} → ${dnsForm.value.content}`)
+    toast.success('DNS 记录已创建')
     showAddModal.value = false
     dnsForm.value = {
       type: 'A',
@@ -448,7 +446,7 @@ async function handleAddRecord() {
     }
     await loadDnsRecords()
   } catch (error: any) {
-    message.error(error?.message || '添加失败')
+    toast.error(error?.message || '添加失败')
   } finally {
     submitting.value = false
   }
@@ -488,12 +486,12 @@ async function handleUpdateRecord() {
     }
 
     await cloudflareApi.updateDnsRecord(recordToUpdate)
-
-    message.success('DNS 记录更新成功')
+    logHistory.dns('更新 DNS 记录', `${editForm.value.type} 记录：${editForm.value.name}`)
+    toast.success('DNS 记录已更新')
     showEditModal.value = false
     await loadDnsRecords()
   } catch (error: any) {
-    message.error(error?.message || '更新失败')
+    toast.error(error?.message || '更新失败')
   } finally {
     submitting.value = false
   }
@@ -503,15 +501,16 @@ async function handleDelete(record: DnsRecord) {
   try {
     // 确保 zone_id 和 id 存在
     if (!record.zone_id || !record.id) {
-      message.error('记录信息不完整，无法删除')
+      toast.error('记录信息不完整，无法删除')
       return
     }
 
-    await cloudflareApi.deleteDnsRecord(record.zone_id, record.id)
-    message.success('DNS 记录删除成功')
+    await cloudflareApi.deleteDnsRecord(currentZone.value!.id, record.id!)
+    logHistory.dns('删除 DNS 记录', `${record.type} 记录：${record.name}`)
+    toast.success('DNS 记录已删除')
     await loadDnsRecords()
   } catch (error: any) {
-    message.error(error?.message || '删除失败')
+    toast.error(error?.message || '删除失败')
   }
 }
 

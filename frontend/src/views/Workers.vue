@@ -153,6 +153,7 @@ async function handleRequest(request) {
 import { ref, onMounted } from 'vue'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'
+import { logHistory } from '@/utils/history'
 
 interface Worker {
   id: string
@@ -199,6 +200,7 @@ async function deleteWorker(worker: Worker) {
 
   try {
     await cloudflareApi.deleteWorker(worker.id)
+    logHistory.worker('删除 Worker', `Worker: ${worker.id}`)
     toast.success('Worker 已删除')
     loadWorkers()
   } catch (error) {
@@ -216,9 +218,11 @@ async function saveWorker() {
   try {
     if (editingWorker.value) {
       await cloudflareApi.updateWorker(workerForm.value.name, workerForm.value.script)
+      logHistory.worker('更新 Worker', `Worker: ${workerForm.value.name}`)
       toast.success('Worker 已更新')
     } else {
       await cloudflareApi.createWorker(workerForm.value.name, workerForm.value.script)
+      logHistory.worker('创建 Worker', `Worker: ${workerForm.value.name}`)
       toast.success('Worker 已创建')
       
       // Add routes if any

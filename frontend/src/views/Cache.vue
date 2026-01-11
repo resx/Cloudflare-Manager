@@ -171,6 +171,8 @@
 import { ref, onMounted, computed, watch, inject, type Ref } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
 import { cloudflareApi, type Zone } from '@/api'
+import { toast } from '@/utils/toast'
+import { logHistory } from '@/utils/history'
 
 const message = useMessage()
 const dialog = useDialog()
@@ -304,7 +306,8 @@ async function updateSetting(id: string, value: any) {
   updating.value = true
   try {
     await cloudflareApi.updateZoneSettings(currentZone.value.id, [{ id, value }])
-    message.success('设置已更新')
+    logHistory.cache('更新缓存设置', `缓存级别：${cacheLevel.value}，浏览器TTL：${browserCacheTTL.value}`)
+    toast.success('缓存设置已更新')
   } catch (error: any) {
     message.error(error?.message || '更新设置失败')
     await loadCacheSettings()
@@ -362,7 +365,8 @@ function handlePurgeAllCache() {
           zone_id: currentZone.value!.id,
           purge_everything: true
         })
-        message.success('缓存清除成功')
+        logHistory.cache('清除所有缓存', '清除域名所有缓存')
+        toast.success('缓存已清除')
       } catch (error: any) {
         message.error(error?.message || '清除缓存失败')
       } finally {
@@ -396,7 +400,8 @@ async function handlePurgeByURL() {
       zone_id: currentZone.value.id,
       files: urls
     })
-    message.success(`已清除 ${urls.length} 个 URL 的缓存`)
+    logHistory.cache('清除指定 URL 缓存', `清除 ${urls.length} 个URL`)
+    toast.success(`URL 缓存已清除`)
     showPurgeByURLModal.value = false
     purgeURLs.value = ''
   } catch (error: any) {
@@ -430,7 +435,8 @@ async function handlePurgeByTag() {
       zone_id: currentZone.value.id,
       tags: tags
     })
-    message.success(`已清除标签 "${tags.join(', ')}" 的缓存`)
+    logHistory.cache('清除指定标签缓存', `清除标签 "${tags.join(', ')}"`)
+    toast.success(`标签缓存已清除`)
     showPurgeByTagModal.value = false
     purgeTags.value = ''
   } catch (error: any) {

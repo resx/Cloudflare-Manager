@@ -178,6 +178,7 @@
 import { ref, computed } from 'vue'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'
+import { logHistory } from '@/utils/history'
 
 const deploying = ref(false)
 const showCodePreview = ref(false)
@@ -282,6 +283,7 @@ async function deployWorker() {
       url: form.value.routePattern,
     }
     
+    logHistory.worker('一键加速部署', `Worker: ${form.value.workerName}, 源站: ${form.value.sourceDomain}`)
     toast.success('Worker 部署成功！')
   } catch (error: any) {
     console.error('Failed to deploy worker:', error)

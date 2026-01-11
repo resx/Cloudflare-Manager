@@ -89,6 +89,7 @@ import { ref, onMounted } from 'vue'
 import { useAccountStore } from '@/stores/account'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'
+import { logHistory } from '@/utils/history'
 
 interface D1Database {
   uuid: string
@@ -141,6 +142,7 @@ async function createDatabase() {
       account_id: accountId,
       name: newDatabase.value.name
     })
+    logHistory.worker('创建 D1 数据库', `数据库: ${newDatabase.value.name}`)
     toast.success('数据库已创建')
     showCreateModal.value = false
     newDatabase.value = { name: '' }
@@ -162,6 +164,7 @@ async function deleteDatabase(db: D1Database) {
 
   try {
     await cloudflareApi.deleteD1Database(accountId, db.uuid)
+    logHistory.worker('删除 D1 数据库', `数据库: ${db.name}`)
     toast.success('数据库已删除')
     loadDatabases()
   } catch (error) {
