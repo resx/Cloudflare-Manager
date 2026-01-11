@@ -112,11 +112,11 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: '/accounts',
-        name: 'AccountManagement',
-        component: () => import('@/views/AccountManagement.vue'),
+        name: 'Accounts',
+        component: () => import('@/views/Accounts.vue'),
         meta: { title: '账户管理' }
       },
-      // 原有的 Dashboard 页面保留以兼容
+      // Dashboard 页面重定向
       {
         path: '/dashboard',
         redirect: '/zones'
