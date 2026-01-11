@@ -112,6 +112,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useAccountStore } from '@/stores/account'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'
 
@@ -121,6 +122,7 @@ interface KVNamespace {
   key_count?: number
 }
 
+const accountStore = useAccountStore()
 const loading = ref(false)
 const namespaces = ref<KVNamespace[]>([])
 const showCreateModal = ref(false)
@@ -132,9 +134,15 @@ const newNamespace = ref({
 })
 
 async function loadNamespaces() {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('请先添加账户并确保账户信息已加载')
+    return
+  }
+
   loading.value = true
   try {
-    namespaces.value = await cloudflareApi.getKVNamespaces()
+    namespaces.value = await cloudflareApi.listKVNamespaces(accountId)
   } catch (error) {
     console.error('Failed to load KV namespaces:', error)
     toast.error('加载命名空间失败')
@@ -144,13 +152,22 @@ async function loadNamespaces() {
 }
 
 async function createNamespace() {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('请先添加账户')
+    return
+  }
+
   if (!newNamespace.value.title) {
     toast.warning('请输入命名空间名称')
     return
   }
 
   try {
-    await cloudflareApi.createKVNamespace(newNamespace.value.title)
+    await cloudflareApi.createKVNamespace({
+      account_id: accountId,
+      title: newNamespace.value.title
+    })
     toast.success('命名空间已创建')
     showCreateModal.value = false
     newNamespace.value = { title: '' }
@@ -162,10 +179,16 @@ async function createNamespace() {
 }
 
 async function deleteNamespace(ns: KVNamespace) {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('账户信息缺失')
+    return
+  }
+
   if (!confirm(`确定要删除命名空间 "${ns.title}" 吗？`)) return
 
   try {
-    await cloudflareApi.deleteKVNamespace(ns.id)
+    await cloudflareApi.deleteKVNamespace(accountId, ns.id)
     toast.success('命名空间已删除')
     loadNamespaces()
   } catch (error) {

@@ -86,6 +86,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useAccountStore } from '@/stores/account'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'
 
@@ -96,6 +97,7 @@ interface D1Database {
   created_at: string
 }
 
+const accountStore = useAccountStore()
 const loading = ref(false)
 const databases = ref<D1Database[]>([])
 const showCreateModal = ref(false)
@@ -105,9 +107,15 @@ const newDatabase = ref({
 })
 
 async function loadDatabases() {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('请先添加账户并确保账户信息已加载')
+    return
+  }
+
   loading.value = true
   try {
-    databases.value = await cloudflareApi.getD1Databases()
+    databases.value = await cloudflareApi.listD1Databases(accountId)
   } catch (error) {
     console.error('Failed to load D1 databases:', error)
     toast.error('加载数据库失败')
@@ -117,13 +125,22 @@ async function loadDatabases() {
 }
 
 async function createDatabase() {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('请先添加账户')
+    return
+  }
+
   if (!newDatabase.value.name) {
     toast.warning('请输入数据库名称')
     return
   }
 
   try {
-    await cloudflareApi.createD1Database(newDatabase.value.name)
+    await cloudflareApi.createD1Database({
+      account_id: accountId,
+      name: newDatabase.value.name
+    })
     toast.success('数据库已创建')
     showCreateModal.value = false
     newDatabase.value = { name: '' }
@@ -135,10 +152,16 @@ async function createDatabase() {
 }
 
 async function deleteDatabase(db: D1Database) {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('账户信息缺失')
+    return
+  }
+
   if (!confirm(`确定要删除数据库 "${db.name}" 吗？`)) return
 
   try {
-    await cloudflareApi.deleteD1Database(db.uuid)
+    await cloudflareApi.deleteD1Database(accountId, db.uuid)
     toast.success('数据库已删除')
     loadDatabases()
   } catch (error) {

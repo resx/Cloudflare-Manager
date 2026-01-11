@@ -1,9 +1,14 @@
 <template>
-  <!-- Operation History - Island Theme with Full Functionality -->
+  <!-- Operation History - Island Theme with Real Data -->
   <div class="animate-in">
-    <div class="mb-6">
-      <h1 class="text-2xl font-semibold">操作历史</h1>
-      <p class="text-sm text-muted-foreground mt-1">查看所有操作记录</p>
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-semibold">操作历史</h1>
+        <p class="text-sm text-muted-foreground mt-1">查看所有操作记录</p>
+      </div>
+      <button class="btn-island-secondary text-sm" @click="clearHistory">
+        清空历史
+      </button>
     </div>
 
     <!-- Filters -->
@@ -28,6 +33,7 @@
           <label class="block text-sm font-medium mb-2">时间范围</label>
           <select
             v-model="filters.timeRange"
+            @change="loadHistory"
             class="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
           >
             <option value="24h">最近24小时</option>
@@ -96,69 +102,36 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-
-interface HistoryItem {
-  id: string
-  type: string
-  action: string
-  description: string
-  status: 'success' | 'error'
-  timestamp: string
-  user?: string
-}
+import { historyLogger, type HistoryItem } from '@/utils/history'
+import { toast } from '@/utils/toast'
 
 const filters = ref({
   type: '',
-  timeRange: '7d',
+  timeRange: '7d' as '24h' | '7d' | '30d' | 'all',
   status: '',
 })
 
-const history = ref<HistoryItem[]>([
-  {
-    id: '1',
-    type: 'dns',
-    action: '添加 DNS 记录',
-    description: '为 example.com 添加了 A 记录',
-    status: 'success',
-    timestamp: new Date().toISOString(),
-    user: '当前账户',
-  },
-  {
-    id: '2',
-    type: 'firewall',
-    action: '创建防火墙规则',
-    description: '添加了"阻止特定国家访问"规则',
-    status: 'success',
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-    user: '当前账户',
-  },
-  {
-    id: '3',
-    type: 'ssl',
-    action: '更新 SSL 设置',
-    description: '启用了 TLS 1.3',
-    status: 'success',
-    timestamp: new Date(Date.now() - 7200000).toISOString(),
-    user: '当前账户',
-  },
-])
+const history = ref<HistoryItem[]>([])
 
 const filteredHistory = computed(() => {
   return history.value.filter(item => {
     if (filters.value.type && item.type !== filters.value.type) return false
     if (filters.value.status && item.status !== filters.value.status) return false
-    
-    // Time range filter
-    const itemTime = new Date(item.timestamp).getTime()
-    const now = Date.now()
-    
-    if (filters.value.timeRange === '24h' && now - itemTime > 86400000) return false
-    if (filters.value.timeRange === '7d' && now - itemTime > 604800000) return false
-    if (filters.value.timeRange === '30d' && now - itemTime > 2592000000) return false
-    
     return true
   })
 })
+
+function loadHistory() {
+  history.value = historyLogger.getByTimeRange(filters.value.timeRange)
+}
+
+function clearHistory() {
+  if (!confirm('确定要清空所有操作历史吗？此操作不可恢复。')) return
+  
+  historyLogger.clear()
+  loadHistory()
+  toast.success('操作历史已清空')
+}
 
 function getIcon(type: string): string {
   const icons: Record<string, string> = {
@@ -185,6 +158,6 @@ function formatDate(dateString: string): string {
 }
 
 onMounted(() => {
-  // Load history from localStorage or API
+  loadHistory()
 })
 </script>
