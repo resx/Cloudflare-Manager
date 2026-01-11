@@ -151,6 +151,7 @@ async function handleRequest(request) {
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useAccountStore } from '@/stores/account'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'
 import { logHistory } from '@/utils/history'
@@ -163,6 +164,7 @@ interface Worker {
   routes?: string[]
 }
 
+const accountStore = useAccountStore()
 const loading = ref(false)
 const workers = ref<Worker[]>([])
 const showCreateModal = ref(false)
@@ -175,9 +177,15 @@ const workerForm = ref({
 })
 
 async function loadWorkers() {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('请先添加账户并确保账户信息已加载')
+    return
+  }
+
   loading.value = true
   try {
-    workers.value = await cloudflareApi.getWorkers()
+    workers.value = await cloudflareApi.listWorkers(accountId)
   } catch (error) {
     console.error('Failed to load workers:', error)
     toast.error('加载 Workers 失败')
@@ -196,10 +204,16 @@ function editWorker(worker: Worker) {
 }
 
 async function deleteWorker(worker: Worker) {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('账户信息缺失')
+    return
+  }
+
   if (!confirm(`确定要删除 Worker "${worker.id}" 吗？`)) return
 
   try {
-    await cloudflareApi.deleteWorker(worker.id)
+    await cloudflareApi.deleteWorker(accountId, worker.id)
     logHistory.worker('删除 Worker', `Worker: ${worker.id}`)
     toast.success('Worker 已删除')
     loadWorkers()
@@ -210,6 +224,12 @@ async function deleteWorker(worker: Worker) {
 }
 
 async function saveWorker() {
+  const accountId = accountStore.currentAccount?.accountId
+  if (!accountId) {
+    toast.error('请先添加账户')
+    return
+  }
+
   if (!workerForm.value.name || !workerForm.value.script) {
     toast.warning('请填写所有必填字段')
     return
@@ -217,11 +237,11 @@ async function saveWorker() {
 
   try {
     if (editingWorker.value) {
-      await cloudflareApi.updateWorker(workerForm.value.name, workerForm.value.script)
+      await cloudflareApi.uploadWorker(accountId, workerForm.value.name, workerForm.value.script)
       logHistory.worker('更新 Worker', `Worker: ${workerForm.value.name}`)
       toast.success('Worker 已更新')
     } else {
-      await cloudflareApi.createWorker(workerForm.value.name, workerForm.value.script)
+      await cloudflareApi.uploadWorker(accountId, workerForm.value.name, workerForm.value.script)
       logHistory.worker('创建 Worker', `Worker: ${workerForm.value.name}`)
       toast.success('Worker 已创建')
       
