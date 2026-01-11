@@ -37,38 +37,14 @@
             <!-- Multi-zone dropdown -->
             <div v-if="zones.length > 1" class="relative">
               <button 
-                @click="showZoneDropdown = !showZoneDropdown"
-                class="text-primary hover:text-primary/80 transition-colors"
+                ref="dropdownButton"
+                @click="toggleZoneDropdown"
+                class="text-primary hover:text-primary/80 transition-colors p-1 rounded hover:bg-muted"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
-              
-              <!-- Dropdown menu - Fixed positioning -->
-              <div 
-                v-if="showZoneDropdown" 
-                class="fixed bg-white rounded-lg shadow-xl border border-border"
-                style="z-index: 9999; min-width: 250px; max-height: 400px; overflow-y: auto; margin-left: -200px; margin-top: 8px;"
-                @click.stop
-              >
-                <div class="py-1">
-                  <button
-                    v-for="zone in zones"
-                    :key="zone.id"
-                    @click="selectZone(zone.id)"
-                    :class="[
-                      'w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors flex items-center justify-between',
-                      currentZone?.id === zone.id ? 'bg-accent text-accent-foreground font-medium' : 'text-foreground'
-                    ]"
-                  >
-                    <span class="truncate pr-2">{{ zone.name }}</span>
-                    <svg v-if="currentZone?.id === zone.id" class="w-4 h-4 ml-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
           
@@ -94,6 +70,40 @@
         </button>
       </div>
     </aside>
+
+    <!-- Floating Zone Dropdown (Teleport to body) -->
+    <Teleport to="body">
+      <div v-if="showZoneDropdown" class="fixed inset-0 z-[9998]" @click="showZoneDropdown = false"></div>
+      <div 
+        v-if="showZoneDropdown"
+        :style="{ left: dropdownPosition.x + 'px', top: dropdownPosition.y + 'px' }"
+        class="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-border min-w-[280px] max-h-[420px] overflow-hidden"
+        @click.stop
+      >
+        <div class="py-2 overflow-y-auto max-h-[420px]">
+          <div class="px-4 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
+            选择域名 ({{ zones.length }})
+          </div>
+          <button
+            v-for="zone in zones"
+            :key="zone.id"
+            @click="selectZone(zone.id)"
+            :class="[
+              'w-full text-left px-4 py-3 text-sm hover:bg-muted transition-all flex items-center justify-between',
+              currentZone?.id === zone.id ? 'bg-accent/50 text-accent-foreground font-medium' : 'text-foreground'
+            ]"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="truncate font-medium">{{ zone.name }}</div>
+              <div class="text-xs text-muted-foreground truncate mt-0.5">{{ zone.status }}</div>
+            </div>
+            <svg v-if="currentZone?.id === zone.id" class="w-5 h-5 ml-3 flex-shrink-0 text-primary" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Main Content Area -->
     <main class="flex-1 flex flex-col min-w-0" style="padding: 12px 12px 12px 0;">
@@ -189,6 +199,8 @@ const themeStore = useThemeStore()
 const collapsed = ref(false)
 const showAccountModal = ref(false)
 const showZoneDropdown = ref(false)
+const dropdownButton = ref<HTMLElement | null>(null)
+const dropdownPosition = ref({ x: 0, y: 0 })
 const zones = ref<Zone[]>([])
 const currentZone = ref<Zone | null>(null)
 
@@ -227,6 +239,17 @@ const zoneMenuItems = computed(() => {
 
 const currentTitle = computed(() => route.meta.title as string || 'Home')
 
+function toggleZoneDropdown() {
+  if (!showZoneDropdown.value && dropdownButton.value) {
+    const rect = dropdownButton.value.getBoundingClientRect()
+    dropdownPosition.value = {
+      x: rect.left,
+      y: rect.bottom + 8 // 8px below button
+    }
+  }
+  showZoneDropdown.value = !showZoneDropdown.value
+}
+
 function selectZone(zoneId: string) {
   const zone = zones.value.find(z => z.id === zoneId)
   if (zone) {
@@ -234,6 +257,13 @@ function selectZone(zoneId: string) {
     localStorage.setItem('currentZoneId', zone.id)
     showZoneDropdown.value = false
     console.log('Switched to zone:', zone.name)
+  }
+}
+
+// Close dropdown when clicking outside
+function handleClickOutside(event: MouseEvent) {
+  if (showZoneDropdown.value && !dropdownButton.value?.contains(event.target as Node)) {
+    showZoneDropdown.value = false
   }
 }
 
@@ -281,6 +311,9 @@ onMounted(() => {
   } else {
     loadZones()
   }
+  
+  // Add click outside listener
+  document.addEventListener('click', handleClickOutside)
 })
 
 provide('currentZone', currentZone)
