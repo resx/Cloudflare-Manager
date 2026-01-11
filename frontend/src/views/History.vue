@@ -1,69 +1,21 @@
 <template>
-  <n-card title="操作历史">
-    <n-alert type="info" style="margin-bottom: 16px">
-      所有操作记录存储在本地浏览器中
-    </n-alert>
+  <!-- History - Island Theme -->
+  <div class="animate-in">
+    <div class="mb-6">
+      <h1 class="text-2xl font-semibold">操作历史</h1>
+      <p class="text-sm text-muted-foreground mt-1">查看所有操作记录</p>
+    </div>
 
-    <n-timeline>
-      <n-timeline-item
-        v-for="record in history"
-        :key="record.id"
-        :type="getTimelineType(record.type)"
-        :title="record.action"
-      >
-        <n-space vertical :size="4">
-          <n-text>{{ record.description }}</n-text>
-          <n-text depth="3">{{ formatDate(record.timestamp) }}</n-text>
-        </n-space>
-      </n-timeline-item>
-    </n-timeline>
-
-    <n-empty
-      v-if="history.length === 0"
-      description="暂无操作记录"
-    />
-  </n-card>
+    <div class="metric-card p-12 text-center">
+      <div class="text-5xl mb-4">🕒</div>
+      <h3 class="font-semibold mb-2">功能开发中</h3>
+      <p class="text-sm text-muted-foreground">
+        操作历史功能即将上线，敬请期待
+      </p>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-
-interface HistoryRecord {
-  id: string
-  type: 'dns' | 'worker' | 'optimize' | 'firewall'
-  action: string
-  description: string
-  timestamp: string
-}
-
-const history = ref<HistoryRecord[]>([])
-
-function getTimelineType(type: string) {
-  const typeMap: Record<string, any> = {
-    dns: 'success',
-    worker: 'info',
-    optimize: 'warning',
-    firewall: 'error'
-  }
-  return typeMap[type] || 'default'
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleString('zh-CN')
-}
-
-function loadHistory() {
-  try {
-    const stored = localStorage.getItem('cf_operation_history')
-    if (stored) {
-      history.value = JSON.parse(stored)
-    }
-  } catch (error) {
-    console.error('Failed to load history:', error)
-  }
-}
-
-onMounted(() => {
-  loadHistory()
-})
+// History tracking will be implemented in the future
 </script>
