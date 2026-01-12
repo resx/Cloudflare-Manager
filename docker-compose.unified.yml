@@ -1,0 +1,50 @@
+version: '3.8'
+
+# Cloudflare Management Platform - Unified Build
+# 本地构建完整镜像（前端 + 后端 + Nginx）
+# 适用于开发和本地部署
+# 访问地址: http://localhost:3000
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # 构建参数（可选）
+      # args:
+      #   - NODE_ENV=production
+    
+    container_name: cf-manager-app
+    restart: unless-stopped
+    
+    ports:
+      - "3000:80"  # HTTP 端口，可修改为其他端口如 8080:80
+      # 如需 HTTPS，添加 443:443 并配置 SSL 证书
+    
+    environment:
+      # Rust 后端环境变量
+      - RUST_LOG=info              # 日志级别: debug/info/warn/error
+      - HOST=127.0.0.1             # 后端监听地址（容器内部）
+      - PORT=8080                  # 后端监听端口（容器内部）
+    
+    # 健康检查配置
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s      # 每30秒检查一次
+      timeout: 10s       # 10秒超时
+      retries: 3         # 失败3次后标记为不健康
+      start_period: 40s  # 启动后40秒才开始检查
+    
+    # 可选：挂载卷以持久化数据
+    # volumes:
+    #   - ./data:/app/data
+
+# 网络配置
+networks:
+  default:
+    name: cf-network
+    # 可选：自定义网络配置
+    # driver: bridge
+    # ipam:
+    #   config:
+    #     - subnet: 172.25.0.0/16

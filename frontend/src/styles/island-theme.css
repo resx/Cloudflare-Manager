@@ -1,0 +1,210 @@
+/* True Island Theme - Based on GitLab Design */
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #f1f3f9;
+    color: #333333;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Dark Mode Styles */
+  [data-theme="dark"] body {
+    background-color: #1a1a1a;
+    color: #e5e5e5;
+  }
+
+  [data-theme="dark"] .island-container {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+  }
+
+  [data-theme="dark"] .metric-card {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+  }
+
+  [data-theme="dark"] .nav-item {
+    color: #c0c0c0;
+  }
+
+  [data-theme="dark"] .nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="dark"] .nav-item.active {
+    background-color: #3b5998;
+    color: #ffffff;
+  }
+
+  [data-theme="dark"] .text-foreground {
+    color: #e5e5e5 !important;
+  }
+
+  [data-theme="dark"] .text-muted-foreground {
+    color: #909090 !important;
+  }
+
+  [data-theme="dark"] .bg-background {
+    background-color: #2d2d2d !important;
+  }
+
+  [data-theme="dark"] .border-border {
+    border-color: #404040 !important;
+  }
+
+  [data-theme="dark"] .bg-muted {
+    background-color: #3a3a3a !important;
+  }
+
+  [data-theme="dark"] input,
+  [data-theme="dark"] textarea,
+  [data-theme="dark"] select {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #e5e5e5 !important;
+  }
+
+  [data-theme="dark"] .banner-gradient {
+    background: linear-gradient(135deg, #2a2a4a 0%, #3a2a3a 100%) !important;
+  }
+
+  [data-theme="dark"] .section-title {
+    color: #909090 !important;
+  }
+}
+
+@layer components {
+
+  /* Main Island Container */
+  .island-container {
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    /* Very subtle shadow */
+    border: 1px solid #ffffff;
+  }
+
+  /* Navigation Item (Sidebar) */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    color: #4a4a4a;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.15s;
+  }
+
+  .nav-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .nav-item.active {
+    background-color: #dbeafe;
+    /* Light blue highlight */
+    color: #1e40af;
+    font-weight: 500;
+  }
+
+  /* Metric Cards */
+  .metric-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* Banner with gradient */
+  .banner-gradient {
+    background: linear-gradient(93deg, #FDF2F3 0%, #F1F0FB 100%);
+    border: 1px solid rgba(0, 0, 0, 0.02);
+  }
+
+  /* Island Buttons */
+  .btn-island-primary {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    background-color: #1d4ed8;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+  }
+
+  .btn-island-primary:hover {
+    background-color: #1e40af;
+  }
+
+  .btn-island-secondary {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    background-color: #f0f0f0;
+    color: #333333;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+  }
+
+  .btn-island-secondary:hover {
+    background-color: #e5e7eb;
+  }
+
+  /* Success Circle */
+  .check-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #d1fae5;
+    color: #065f46;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  /* Alert variants */
+  .alert-info {
+    background-color: #dbeafe;
+    border: 1px solid #93c5fd;
+    color: #1e40af;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .alert-warning {
+    background-color: #fef3c7;
+    border: 1px solid #fcd34d;
+    color: #92400e;
+    border-radius: 8px;
+    padding: 16px;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

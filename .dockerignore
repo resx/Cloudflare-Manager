@@ -1,0 +1,38 @@
+# Git 文件
+.git
+.gitignore
+.gitlab-ci.yml
+
+# 文档和说明文件
+README.md
+TODO.md
+PROJECT_OVERVIEW.md
+ZONE_FIX_SUMMARY.md
+*.md
+
+# 前端
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/.env*
+
+# 后端
+backend/target
+backend/Cargo.lock
+
+# IDE 配置
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+
+# Claude Code
+.claude
