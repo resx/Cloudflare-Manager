@@ -172,7 +172,6 @@ npm run dev
 
 ## 📚 详细文档
 
-- 📖 [快速入门](QUICK_START_GUIDE.md)
 - 🚀 [部署指南](DEPLOYMENT.md)
 - 🔧 [贡献指南](CONTRIBUTING.md)
 - 📝 [API 权限](API_TOKEN_PERMISSIONS.md)
@@ -202,7 +201,6 @@ npm run dev
 - **前端**: Vue 3, Vite, Tailwind CSS, TypeScript, Pinia
 - **后端**: Rust, Actix-web, Reqwest, Serde
 - **容器**: Docker, Docker Compose, Nginx, Supervisor
-- **CI/CD**: GitLab CI with Docker-in-Docker
 
 ---
 
