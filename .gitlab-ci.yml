@@ -1,22 +1,15 @@
-# 使用明确的 Docker CLI 版本（避免镜像冲突）
-image: docker:24.0.7-cli
+# 使用最新版 Docker CLI，自动适配宿主机的 Docker API 版本
+image: docker:cli
 
 # 全局变量配置
 variables:
-  # 显式禁用 TLS，防止证书生成失败导致连接被拒
-  DOCKER_TLS_CERTDIR: ""
-  DOCKER_HOST: "tcp://docker:2375"
+  # 移除 DOCKER_HOST，让 CLI 自动通过 /var/run/docker.sock 连接宿主机
+  # 移除 DOCKER_TLS_CERTDIR，Socket 连接不需要 TLS
+  
   # 使用 overlay2 驱动以获得最佳性能
   DOCKER_DRIVER: overlay2
   # 镜像命名规则
   APP_IMAGE: $CI_REGISTRY_IMAGE
-
-# Docker-in-Docker 服务配置
-services:
-  - name: docker:24.0.7-dind  # 明确使用服务端镜像
-    alias: docker
-    # 显式关闭 TLS 验证，并开启 MTU 调整（防止大包丢包）
-    command: ["--tls=false", "--storage-driver=overlay2", "--mtu=1400"]
 
 # 定义构建阶段
 stages:
@@ -26,8 +19,9 @@ stages:
 build_image:
   stage: build
   before_script:
-    # 调试命令：打印版本确保分离成功
+    # 调试命令：打印版本
     - docker --version
+    # 这里会显示宿主机的信息（验证 Socket 挂载是否成功）
     - docker info
     # 登录到 GitLab Container Registry
     - echo "Logging in to $CI_REGISTRY..."
@@ -35,6 +29,7 @@ build_image:
   script:
     # 构建统一镜像（前端 + 后端 + nginx）
     - echo "Building unified application image (frontend + backend + nginx)..."
+    # 直接在宿主机构建，速度更快，且利用宿主机缓存
     - docker build -t $APP_IMAGE:$CI_COMMIT_SHA .
     - docker tag $APP_IMAGE:$CI_COMMIT_SHA $APP_IMAGE:latest
 
@@ -68,5 +63,5 @@ build_image:
     - develop
     - tags
   after_script:
-    # 可选：清理旧的 Docker 镜像和容器
+    # 可选：清理旧的 Docker 镜像和容器（注意：这会清理宿主机上的未被引用的资源）
     - docker system prune -f || true

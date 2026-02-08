@@ -1,7 +1,7 @@
 # ============================================
 # 第一阶段：构建前端
 # ============================================
-FROM node:20-alpine as frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /frontend
 
@@ -20,7 +20,7 @@ RUN npm run build
 # ============================================
 # 第二阶段：构建后端
 # ============================================
-FROM rust:1.83-alpine as backend-builder
+FROM rust:1.83-alpine AS backend-builder
 
 # 安装必要的构建工具
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig

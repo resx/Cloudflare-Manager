@@ -12,7 +12,8 @@ tokio = { version = "1.35", features = ["full"] }
 reqwest = { version = "0.11", features = ["json", "multipart"] }
 env_logger = "0.11"
 log = "0.4"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde", "clock"], default-features = false }
+time = "=0.3.36"  # Pin to last version supporting Rust 1.83
 uuid = { version = "1.6", features = ["v4", "serde"] }
 urlencoding = "2.1"
 
