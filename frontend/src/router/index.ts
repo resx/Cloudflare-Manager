@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
         path: '/quick-deploy',
         name: 'QuickDeploy',
         component: () => import('@/views/QuickDeploy.vue'),
-        meta: { title: '一键加速' }
+        meta: { title: '一键优选' }
       },
       {
         path: '/workers',

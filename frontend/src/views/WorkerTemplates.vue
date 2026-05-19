@@ -37,7 +37,7 @@
         class="metric-card p-6 hover:border-primary transition-all cursor-pointer group"
         @click="viewTemplate(template)"
       >
-        <div class="text-4xl mb-4">{{ template.icon }}</div>
+        <div class="text-4xl mb-4"><component :is="template.icon" class="w-7 h-7" /></div>
         
         <h3 class="font-semibold mb-2 group-hover:text-primary transition-colors">
           {{ template.name }}
@@ -60,10 +60,10 @@
 
     <!-- Template Detail Modal -->
     <div v-if="selectedTemplate" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="selectedTemplate = null">
-      <div class="bg-white rounded-2xl shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto" @click.stop>
+      <div class="glass-modal w-full max-w-4xl max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="p-6 border-b border-border flex justify-between items-center">
           <div class="flex items-center gap-3">
-            <span class="text-4xl">{{ selectedTemplate.icon }}</span>
+            <span class="text-4xl"><component :is="selectedTemplate.icon" class="w-7 h-7" /></span>
             <div>
               <h2 class="text-xl font-semibold">{{ selectedTemplate.name }}</h2>
               <p class="text-sm text-muted-foreground">{{ selectedTemplate.category }}</p>
@@ -88,7 +88,7 @@
             <h3 class="font-semibold mb-2">功能特性</h3>
             <ul class="space-y-1 text-sm text-muted-foreground">
               <li v-for="feature in selectedTemplate.features" :key="feature" class="flex items-start gap-2">
-                <span class="text-success mt-0.5">✓</span>
+                <component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline mt-0.5" />
                 <span>{{ feature }}</span>
               </li>
             </ul>
@@ -115,9 +115,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from '@/utils/toast'
+import { HandLeftOutline, EnterOutline, FlashOutline, LockClosedOutline, ImageOutline, BeakerOutline, CheckmarkOutline } from '@vicons/ionicons5'
 
 interface WorkerTemplate {
   id: string
@@ -126,7 +127,7 @@ interface WorkerTemplate {
   fullDescription: string
   category: string
   difficulty: string
-  icon: string
+  icon: Component
   features?: string[]
   code: string
 }
@@ -144,7 +145,7 @@ const templates = ref<WorkerTemplate[]>([
     fullDescription: '这是一个最基础的 Worker 模板，演示了如何创建一个简单的 HTTP 响应。适合初学者了解 Workers 的基本结构。',
     category: '入门',
     difficulty: '简单',
-    icon: '👋',
+    icon: HandLeftOutline,
     features: [
       '基础的事件监听器',
       'Response 对象使用',
@@ -167,7 +168,7 @@ async function handleRequest(request) {
     fullDescription: 'API 网关模板提供了路由匹配、请求转发和错误处理功能，可以作为微服务架构的入口。',
     category: 'API',
     difficulty: '中等',
-    icon: '🚪',
+    icon: EnterOutline,
     features: [
       '路由匹配和分发',
       'JSON 响应处理',
@@ -219,7 +220,7 @@ async function handlePosts(request) {
     fullDescription: '通过边缘缓存和智能路由，显著提升静态资源的访问速度。支持自定义缓存策略和缓存清除。',
     category: '性能',
     difficulty: '中等',
-    icon: '⚡',
+    icon: FlashOutline,
     features: [
       '边缘缓存',
       '自定义 TTL',
@@ -270,7 +271,7 @@ async function handleRequest(request) {
     fullDescription: '实现基于 JWT 的身份验证系统，保护 API 端点，验证用户令牌。',
     category: '安全',
     difficulty: '高级',
-    icon: '🔐',
+    icon: LockClosedOutline,
     features: [
       'JWT 解析和验证',
       '权限检查',
@@ -324,7 +325,7 @@ async function verifyJWT(token) {
     fullDescription: '利用 Cloudflare Image Resizing 实现图片自动优化，支持 WebP、AVIF 格式转换和智能裁剪。',
     category: '媒体',
     difficulty: '中等',
-    icon: '🖼️',
+    icon: ImageOutline,
     features: [
       '自动格式转换',
       '尺寸调整',
@@ -367,7 +368,7 @@ async function handleRequest(request) {
     fullDescription: '实现流量分割，支持多变量测试，帮助优化转化率和用户体验。',
     category: '实验',
     difficulty: '中等',
-    icon: '🧪',
+    icon: BeakerOutline,
     features: [
       '流量随机分配',
       '多变量支持',

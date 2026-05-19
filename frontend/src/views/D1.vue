@@ -13,9 +13,9 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="metric-card p-12 text-center">
-      <div class="text-4xl mb-4">⏳</div>
-      <p class="text-muted-foreground">加载数据库...</p>
+    <div v-if="loading" class="empty-state">
+      <div class="glass-spinner"></div>
+      <p class="mt-4 text-sm text-muted-foreground">加载中...</p>
     </div>
 
     <!-- Database List -->
@@ -27,7 +27,7 @@
         @click="viewDatabase(db)"
       >
         <div class="flex items-start justify-between mb-4">
-          <div class="text-3xl">💾</div>
+          <component :is="ServerOutline" class="w-5 h-5 text-primary/60" />
           <button 
             @click.stop="deleteDatabase(db)"
             class="text-muted-foreground hover:text-red-600"
@@ -48,10 +48,12 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="metric-card p-12 text-center">
-      <div class="text-5xl mb-4">💾</div>
-      <h3 class="font-semibold mb-2">暂无 D1 数据库</h3>
-      <p class="text-sm text-muted-foreground mb-4">创建无服务器 SQL 数据库</p>
+    <div v-else class="empty-state">
+      <div class="empty-state-icon">
+        <component :is="ServerOutline" class="w-7 h-7" />
+      </div>
+      <div class="empty-state-title">暂无 D1 数据库</div>
+      <div class="empty-state-desc">创建无服务器 SQL 数据库</div>
       <button class="btn-island-primary" @click="showCreateModal = true">
         创建数据库
       </button>
@@ -59,7 +61,7 @@
 
     <!-- Create Modal -->
     <div v-if="showCreateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showCreateModal = false">
-      <div class="bg-white rounded-2xl shadow-lg w-full max-w-xl" @click.stop>
+      <div class="glass-modal w-full max-w-xl" @click.stop>
         <div class="p-6 border-b border-border">
           <h2 class="text-xl font-semibold">创建 D1 数据库</h2>
         </div>
@@ -86,6 +88,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { ServerOutline } from '@vicons/ionicons5'
 import { useAccountStore } from '@/stores/account'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'

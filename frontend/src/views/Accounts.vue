@@ -8,10 +8,10 @@
       </div>
       <div class="flex gap-3">
         <button class="btn-island-secondary text-sm" @click="exportAccounts">
-          📤 导出
+          <component :is="CloudUploadOutline" class="w-4 h-4 mr-1" /> 导出
         </button>
         <button class="btn-island-secondary text-sm" @click="showImportModal = true">
-          📥 导入
+          <component :is="CloudDownloadOutline" class="w-4 h-4 mr-1" /> 导入
         </button>
         <button class="btn-island-primary" @click="showAddModal = true">
           <span class="text-lg mr-2">+</span>
@@ -51,18 +51,18 @@
         <h3 class="font-semibold mb-2">{{ account.alias }}</h3>
         <div class="text-xs text-muted-foreground space-y-1">
           <div class="flex items-center">
-            <span class="mr-2">🔑</span>
+            <component :is="KeyOutline" class="w-4 h-4 mr-2" />
             <span>Token: {{ maskToken(account.apiToken) }}</span>
           </div>
           <div v-if="account.accountId" class="flex items-center">
-            <span class="mr-2">🆔</span>
+            <component :is="FingerPrintOutline" class="w-4 h-4 mr-2" />
             <span>ID: {{ account.accountId.substring(0, 8) }}...</span>
           </div>
         </div>
 
         <!-- Active Badge -->
         <div v-if="accountStore.currentAccount?.id === account.id" class="mt-4">
-          <span class="px-2 py-1 text-xs rounded-full bg-success text-success-foreground">
+          <span class="glass-badge glass-badge-success">
             当前使用
           </span>
         </div>
@@ -70,10 +70,12 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="metric-card p-12 text-center">
-      <div class="text-5xl mb-4">👤</div>
-      <h3 class="font-semibold mb-2">暂无账户</h3>
-      <p class="text-sm text-muted-foreground mb-4">添加您的第一个 Cloudflare 账户开始使用</p>
+    <div v-else class="empty-state">
+      <div class="empty-state-icon">
+        <component :is="PersonOutline" class="w-7 h-7" />
+      </div>
+      <div class="empty-state-title">暂无账户</div>
+      <div class="empty-state-desc">添加您的第一个 Cloudflare 账户开始使用</div>
       <button class="btn-island-primary" @click="showAddModal = true">
         添加账户
       </button>
@@ -102,7 +104,7 @@
 
     <!-- Add Account Modal -->
     <div v-if="showAddModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showAddModal = false">
-      <div class="bg-white rounded-2xl shadow-lg w-full max-w-xl" @click.stop>
+      <div class="glass-modal w-full max-w-xl" @click.stop>
         <div class="p-6 border-b border-border">
           <h2 class="text-xl font-semibold">添加 Cloudflare 账户</h2>
         </div>
@@ -141,7 +143,7 @@
 
     <!-- Import Modal -->
     <div v-if="showImportModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showImportModal = false">
-      <div class="bg-white rounded-2xl shadow-lg w-full max-w-xl" @click.stop>
+      <div class="glass-modal w-full max-w-xl" @click.stop>
         <div class="p-6 border-b border-border">
           <h2 class="text-xl font-semibold">导入账户</h2>
         </div>
@@ -167,6 +169,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { CloudUploadOutline, CloudDownloadOutline, KeyOutline, FingerPrintOutline, PersonOutline } from '@vicons/ionicons5'
 import { useAccountStore } from '@/stores/account'
 import { toast } from '@/utils/toast'
 

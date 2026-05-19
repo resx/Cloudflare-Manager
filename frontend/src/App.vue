@@ -1,7 +1,8 @@
 <template>
   <n-message-provider>
     <n-dialog-provider>
-      <div class="min-h-screen bg-background">
+      <div class="min-h-screen relative">
+        <div class="glass-gradient-bg"></div>
         <router-view />
       </div>
     </n-dialog-provider>
@@ -28,8 +29,6 @@ onMounted(() => {
 </script>
 
 <style>
-/* Island Theme base styles are imported from island-theme.css */
-
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   transition: background-color 0.3s, color 0.3s;
@@ -39,15 +38,11 @@ body {
   min-height: 100vh;
 }
 
-/* 亮色主题 */
 [data-theme='light'] #app {
-  background-color: #f5f7fa;
   color: #333;
 }
 
-/* 暗色主题 */
 [data-theme='dark'] #app {
-  background-color: #18181c;
   color: #f5f7fa;
 }
 </style>

@@ -12,17 +12,17 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
       <div class="metric-card p-6 cursor-pointer hover:border-primary transition-colors" @click="optimizeForSecurity">
         <div class="flex items-start gap-4">
-          <div class="text-4xl">🛡️</div>
+          <div class="text-4xl"><component :is="ShieldOutline" class="w-6 h-6 text-primary" /></div>
           <div class="flex-1">
             <h3 class="font-semibold mb-2">安全优先模式</h3>
             <p class="text-sm text-muted-foreground mb-3">
               适用于金融、政府、企业官网等对安全要求极高的场景
             </p>
             <ul class="text-xs text-muted-foreground space-y-1">
-              <li>✓ 安全级别：高</li>
-              <li>✓ SSL模式：严格</li>
-              <li>✓ 强制HTTPS</li>
-              <li>✓ 浏览器检查</li>
+              <li><component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline" /> 安全级别：高</li>
+              <li><component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline" /> SSL模式：严格</li>
+              <li><component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline" /> 强制HTTPS</li>
+              <li><component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline" /> 浏览器检查</li>
             </ul>
           </div>
         </div>
@@ -30,17 +30,17 @@
 
       <div class="metric-card p-6 cursor-pointer hover:border-primary transition-colors" @click="optimizeForSpeed">
         <div class="flex items-start gap-4">
-          <div class="text-4xl">⚡</div>
+          <div class="text-4xl"><component :is="FlashOutline" class="w-6 h-6 text-primary" /></div>
           <div class="flex-1">
             <h3 class="font-semibold mb-2">速度优先模式</h3>
             <p class="text-sm text-muted-foreground mb-3">
               适用于电商、媒体、个人博客等对性能要求高的场景
             </p>
             <ul class="text-xs text-muted-foreground space-y-1">
-              <li>✓ 缓存级别：积极</li>
-              <li>✓ Brotli压缩</li>
-              <li>✓ HTTP/3启用</li>
-              <li>✓ 浏览器缓存：1年</li>
+              <li><component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline" /> 缓存级别：积极</li>
+              <li><component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline" /> Brotli压缩</li>
+              <li><component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline" /> HTTP/3启用</li>
+              <li><component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline" /> 浏览器缓存：1年</li>
             </ul>
           </div>
         </div>
@@ -77,6 +77,7 @@
 
 <script setup lang="ts">
 import { ref, inject, onMounted, type Ref } from 'vue'
+import { ShieldOutline, FlashOutline, CheckmarkOutline } from '@vicons/ionicons5'
 import { cloudflareApi, type Zone } from '@/api'
 import { toast } from '@/utils/toast'
 

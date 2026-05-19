@@ -3,8 +3,8 @@
   <div class="animate-in">
     <!-- Greeting Section -->
     <div class="flex items-center mb-6">
-      <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl mr-4" style="background-color: #e0e7ff; color: #4338ca;">
-        ✿
+      <div class="empty-state-icon mr-4" style="width: 48px; height: 48px; margin-bottom: 0;">
+        <component :is="SparklesOutline" class="w-6 h-6" />
       </div>
       <div>
         <div class="text-xs text-muted-foreground">Today's highlights</div>
@@ -34,7 +34,7 @@
       <div class="metric-card h-36">
         <div class="flex justify-between items-start mb-3">
           <span class="text-sm text-muted-foreground">管理的域名</span>
-          <span class="text-xl">🌐</span>
+          <component :is="GlobeOutline" class="w-5 h-5 text-primary/60" />
         </div>
         <div class="text-3xl font-semibold mb-1">{{ zones.length }}</div>
         <div class="text-xs text-muted-foreground">
@@ -47,7 +47,7 @@
       <div class="metric-card h-36">
         <div class="flex justify-between items-start mb-3">
           <span class="text-sm text-muted-foreground">DNS 记录</span>
-          <span class="text-xl">🔧</span>
+          <component :is="BuildOutline" class="w-5 h-5 text-primary/60" />
         </div>
         <div class="text-3xl font-semibold mb-1">{{ totalDnsRecords }}</div>
         <div class="text-xs text-muted-foreground">
@@ -60,7 +60,7 @@
       <div class="metric-card h-36">
         <div class="flex justify-between items-start mb-3">
           <span class="text-sm text-muted-foreground">账户数量</span>
-          <span class="text-xl">👤</span>
+          <component :is="PersonOutline" class="w-5 h-5 text-primary/60" />
         </div>
         <div class="text-3xl font-semibold mb-1">{{ accountStore.accounts.length }}</div>
         <div class="text-xs text-muted-foreground">
@@ -73,7 +73,7 @@
       <div class="metric-card h-36">
         <div class="flex justify-between items-start mb-3">
           <span class="text-sm text-muted-foreground">Workers 脚本</span>
-          <span class="text-xl">⚙️</span>
+          <component :is="SettingsOutline" class="w-5 h-5 text-primary/60" />
         </div>
         <div class="text-3xl font-semibold mb-1">{{ workersCount }}</div>
         <div class="text-xs text-muted-foreground">
@@ -92,7 +92,7 @@
           class="metric-card h-24 hover:border-primary transition-colors cursor-pointer text-left"
         >
           <div class="flex items-center gap-3">
-            <span class="text-2xl">🚀</span>
+            <component :is="RocketOutline" class="w-6 h-6 text-primary" />
             <div>
               <div class="font-medium text-sm">一键加速部署</div>
               <div class="text-xs text-muted-foreground">快速优化配置</div>
@@ -100,12 +100,12 @@
           </div>
         </button>
 
-        <button 
+        <button
           @click="$router.push('/dns')"
           class="metric-card h-24 hover:border-primary transition-colors cursor-pointer text-left"
         >
           <div class="flex items-center gap-3">
-            <span class="text-2xl">🔧</span>
+            <component :is="BuildOutline" class="w-6 h-6 text-primary" />
             <div>
               <div class="font-medium text-sm">管理 DNS 记录</div>
               <div class="text-xs text-muted-foreground">域名解析配置</div>
@@ -113,12 +113,12 @@
           </div>
         </button>
 
-        <button 
+        <button
           @click="$router.push('/workers')"
           class="metric-card h-24 hover:border-primary transition-colors cursor-pointer text-left"
         >
           <div class="flex items-center gap-3">
-            <span class="text-2xl">⚙️</span>
+            <component :is="SettingsOutline" class="w-6 h-6 text-primary" />
             <div>
               <div class="font-medium text-sm">Workers 管理</div>
               <div class="text-xs text-muted-foreground">边缘计算脚本</div>
@@ -126,12 +126,12 @@
           </div>
         </button>
 
-        <button 
+        <button
           @click="$router.push('/firewall')"
           class="metric-card h-24 hover:border-primary transition-colors cursor-pointer text-left"
         >
           <div class="flex items-center gap-3">
-            <span class="text-2xl">🛡️</span>
+            <component :is="ShieldOutline" class="w-6 h-6 text-primary" />
             <div>
               <div class="font-medium text-sm">配置防火墙</div>
               <div class="text-xs text-muted-foreground">安全规则设置</div>
@@ -152,18 +152,18 @@
             class="flex items-center justify-between py-2 border-b border-border last:border-b-0"
           >
             <div class="flex items-center gap-3">
-              <span class="text-lg">🌐</span>
+              <component :is="GlobeOutline" class="w-5 h-5 text-primary/60" />
               <div>
                 <div class="font-medium text-sm">{{ zone.name }}</div>
                 <div class="text-xs text-muted-foreground">{{ zone.name_servers?.slice(0, 2).join(', ') || '-' }}</div>
               </div>
             </div>
-            <span 
+            <span
               :class="[
-                'px-2 py-1 text-xs rounded-full',
-                zone.status === 'active' 
-                  ? 'bg-success text-success-foreground' 
-                  : 'bg-muted text-muted-foreground'
+                'glass-badge',
+                zone.status === 'active'
+                  ? 'glass-badge-success'
+                  : 'glass-badge-info'
               ]"
             >
               {{ zone.status }}
@@ -177,7 +177,9 @@
     <div class="mt-8">
       <h3 class="text-base font-semibold mb-4">需要关注的项目</h3>
       <div class="metric-card flex items-center p-6">
-        <div class="check-circle mr-4">✓</div>
+        <div class="check-circle mr-4">
+          <component :is="CheckmarkCircleOutline" class="w-5 h-5" />
+        </div>
         <div class="font-medium text-sm">很好！所有待办事项已完成。</div>
       </div>
     </div>
@@ -188,6 +190,16 @@
 import { ref, onMounted } from 'vue'
 import { cloudflareApi, type Zone } from '@/api'
 import { useAccountStore } from '@/stores/account'
+import {
+  SparklesOutline,
+  GlobeOutline,
+  BuildOutline,
+  PersonOutline,
+  SettingsOutline,
+  RocketOutline,
+  ShieldOutline,
+  CheckmarkCircleOutline,
+} from '@vicons/ionicons5'
 
 const accountStore = useAccountStore()
 const loading = ref(false)

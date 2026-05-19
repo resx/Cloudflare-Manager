@@ -67,13 +67,13 @@
         <div class="flex items-start justify-between">
           <div class="flex-1">
             <div class="flex items-center gap-3 mb-2">
-              <span class="text-xl">{{ getIcon(item.type) }}</span>
+              <span class="text-xl"><component :is="getIcon(item.type)" class="w-5 h-5" /></span>
               <h3 class="font-semibold">{{ item.action }}</h3>
               <span :class="[
                 'px-2 py-1 text-xs rounded-full',
-                item.status === 'success' 
-                  ? 'bg-success text-success-foreground' 
-                  : 'bg-red-100 text-red-700'
+                item.status === 'success'
+                  ? 'glass-badge glass-badge-success'
+                  : 'glass-badge glass-badge-error'
               ]">
                 {{ item.status === 'success' ? '成功' : '失败' }}
               </span>
@@ -82,8 +82,8 @@
             <div class="text-sm text-muted-foreground space-y-1">
               <div>{{ item.description }}</div>
               <div class="flex items-center gap-4">
-                <span>🕐 {{ formatDate(item.timestamp) }}</span>
-                <span v-if="item.user">👤 {{ item.user }}</span>
+                <span class="flex items-center gap-1"><component :is="TimeOutline" class="w-4 h-4" /> {{ formatDate(item.timestamp) }}</span>
+                <span v-if="item.user" class="flex items-center gap-1"><component :is="PersonOutline" class="w-4 h-4" /> {{ item.user }}</span>
               </div>
             </div>
           </div>
@@ -92,16 +92,19 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="metric-card p-12 text-center">
-      <div class="text-5xl mb-4">🕒</div>
-      <h3 class="font-semibold mb-2">暂无操作记录</h3>
-      <p class="text-sm text-muted-foreground">您的操作记录将显示在这里</p>
+    <div v-else class="empty-state">
+      <div class="empty-state-icon">
+        <component :is="TimeOutline" class="w-7 h-7" />
+      </div>
+      <div class="empty-state-title">暂无操作记录</div>
+      <div class="empty-state-desc">您的操作记录将显示在这里</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, type Component } from 'vue'
+import { GlobeOutline, ShieldOutline, LockClosedOutline, SpeedometerOutline, SettingsOutline, TimeOutline, PersonOutline, DocumentTextOutline } from '@vicons/ionicons5'
 import { historyLogger, type HistoryItem } from '@/utils/history'
 import { toast } from '@/utils/toast'
 
@@ -133,15 +136,15 @@ function clearHistory() {
   toast.success('操作历史已清空')
 }
 
-function getIcon(type: string): string {
-  const icons: Record<string, string> = {
-    dns: '🌐',
-    firewall: '🛡️',
-    ssl: '🔒',
-    cache: '💨',
-    worker: '⚙️',
+function getIcon(type: string): Component {
+  const icons: Record<string, Component> = {
+    dns: GlobeOutline,
+    firewall: ShieldOutline,
+    ssl: LockClosedOutline,
+    cache: SpeedometerOutline,
+    worker: SettingsOutline,
   }
-  return icons[type] || '📝'
+  return icons[type] || DocumentTextOutline
 }
 
 function formatDate(dateString: string): string {

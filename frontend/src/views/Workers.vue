@@ -13,9 +13,9 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="metric-card p-12 text-center">
-      <div class="text-4xl mb-4">⏳</div>
-      <p class="text-muted-foreground">加载 Workers...</p>
+    <div v-if="loading" class="empty-state">
+      <div class="glass-spinner"></div>
+      <p class="mt-4 text-sm text-muted-foreground">加载中...</p>
     </div>
 
     <!-- Workers List -->
@@ -30,7 +30,7 @@
             <!-- Worker Header -->
             <div class="flex items-center gap-3 mb-3">
               <h3 class="font-semibold text-lg">{{ worker.id }}</h3>
-              <span class="px-2 py-1 text-xs rounded-full bg-success text-success-foreground">
+              <span class="glass-badge glass-badge-success">
                 {{ worker.script ? '已部署' : '未部署' }}
               </span>
             </div>
@@ -55,7 +55,7 @@
             </button>
             <button
               @click="deleteWorker(worker)"
-              class="px-3 py-1.5 text-xs rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+              class="btn-island-danger text-xs"
             >
               删除
             </button>
@@ -65,10 +65,12 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="metric-card p-12 text-center">
-      <div class="text-5xl mb-4">⚙️</div>
-      <h3 class="font-semibold mb-2">暂无 Workers</h3>
-      <p class="text-sm text-muted-foreground mb-4">创建您的第一个 Worker 脚本</p>
+    <div v-else class="empty-state">
+      <div class="empty-state-icon">
+        <component :is="SettingsOutline" class="w-7 h-7" />
+      </div>
+      <div class="empty-state-title">暂无 Workers</div>
+      <div class="empty-state-desc">创建您的第一个 Worker 脚本</div>
       <button class="btn-island-primary" @click="showCreateModal = true">
         创建 Worker
       </button>
@@ -76,7 +78,7 @@
 
     <!-- Create/Edit Worker Modal -->
     <div v-if="showCreateModal || editingWorker" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="closeModal">
-      <div class="bg-white rounded-2xl shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto" @click.stop>
+      <div class="glass-modal w-full max-w-4xl max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="p-6 border-b border-border">
           <h2 class="text-xl font-semibold">{{ editingWorker ? '编辑 Worker' : '创建 Worker' }}</h2>
         </div>
@@ -123,7 +125,7 @@ async function handleRequest(request) {
                 />
                 <button
                   @click="workerForm.routes.splice(index, 1)"
-                  class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                  class="btn-island-danger text-xs"
                 >
                   删除
                 </button>
@@ -151,6 +153,7 @@ async function handleRequest(request) {
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { SettingsOutline, CheckmarkCircleOutline } from '@vicons/ionicons5'
 import { useAccountStore } from '@/stores/account'
 import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'

@@ -1,16 +1,21 @@
 <template>
-  <!-- True Island Theme Layout (GitLab Style) -->
-  <div class="flex h-screen" style="background-color: #f1f3f9;">
+  <!-- Floating Island Layout -->
+  <div class="flex h-screen p-4 gap-4">
     
-    <!-- Sidebar - Transparent, blends with background -->
-    <aside 
-      :class="['transition-all duration-300 flex flex-col', collapsed ? 'w-16' : 'w-60']"
-      style="background-color: transparent; padding: 20px 10px;"
+    <!-- Sidebar - Floating Island -->
+    <aside
+      :class="['glass-sidebar transition-all duration-300 flex flex-col rounded-2xl', collapsed ? 'w-16' : 'w-60']"
+      style="padding: 20px 10px;"
     >
       <!-- Logo -->
       <div class="px-3 pb-5">
-        <div v-if="!collapsed" class="font-bold text-lg text-foreground">Cloudflare Manager</div>
-        <div v-else class="text-center text-2xl">☁️</div>
+        <div v-if="!collapsed" class="font-bold text-lg text-foreground flex items-center gap-2">
+          <component :is="CloudOutline" class="w-5 h-5 text-primary" />
+          <span>CF Manager</span>
+        </div>
+        <div v-else class="flex justify-center">
+          <component :is="CloudOutline" class="w-6 h-6 text-primary" />
+        </div>
       </div>
 
       <!-- Navigation -->
@@ -22,9 +27,11 @@
             v-for="item in mainMenuItems"
             :key="item.path"
             @click.prevent="router.push(item.path)"
-            :class="['nav-item', { 'active': route.path === item.path }]"
+            :class="['nav-item', { 'active': route.path === item.path, 'justify-center': collapsed }]"
+            @mouseenter="showTooltip($event, item.label)"
+            @mouseleave="hideTooltip"
           >
-            <span class="text-lg mr-3">{{ item.icon }}</span>
+            <component :is="item.icon" class="w-[18px] h-[18px] flex-shrink-0" :class="{ 'mr-3': !collapsed }" />
             <span v-if="!collapsed">{{ item.label }}</span>
           </a>
         </div>
@@ -36,37 +43,37 @@
             <span class="truncate flex-1 max-w-[150px]" :title="currentZone?.name">{{ currentZone?.name || '选择域名' }}</span>
             <!-- Multi-zone dropdown -->
             <div v-if="zones.length > 1" class="relative">
-              <button 
+              <button
                 ref="dropdownButton"
                 @click="toggleZoneDropdown"
                 class="text-primary hover:text-primary/80 transition-colors p-1 rounded hover:bg-muted"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
+                <component :is="ChevronDownOutline" class="w-4 h-4" />
               </button>
             </div>
           </div>
-          
+
           <!-- Zone menu items -->
           <a
             v-for="item in zoneMenuItems"
             :key="item.path"
             @click.prevent="router.push(item.path)"
-            :class="['nav-item', { 'active': route.path === item.path }]"
+            :class="['nav-item', { 'active': route.path === item.path, 'justify-center': collapsed }]"
+            @mouseenter="showTooltip($event, item.label)"
+            @mouseleave="hideTooltip"
           >
-            <span class="text-lg mr-3">{{ item.icon }}</span>
+            <component :is="item.icon" class="w-[18px] h-[18px] flex-shrink-0" :class="{ 'mr-3': !collapsed }" />
             <span v-if="!collapsed" class="flex-1">{{ item.label }}</span>
-            <span v-if="!collapsed && item.pro" class="text-xs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-medium">Pro+</span>
+            <span v-if="!collapsed && item.pro" class="glass-badge glass-badge-warning text-[10px]">Pro+</span>
           </a>
         </div>
       </nav>
 
       <!-- Collapse Button -->
       <div class="mt-auto pt-3 px-3">
-        <button @click="collapsed = !collapsed" class="w-full text-sm text-muted-foreground hover:text-foreground flex items-center">
-          <span class="text-lg mr-2">{{ collapsed ? '→' : '←' }}</span>
-          <span v-if="!collapsed">Collapse sidebar</span>
+        <button @click="collapsed = !collapsed" class="w-full text-sm text-muted-foreground hover:text-foreground flex items-center justify-center">
+          <component :is="collapsed ? ChevronForwardOutline : ChevronBackOutline" class="w-4 h-4" />
+          <span v-if="!collapsed" class="ml-2">收起侧栏</span>
         </button>
       </div>
     </aside>
@@ -77,7 +84,7 @@
       <div 
         v-if="showZoneDropdown"
         :style="{ left: dropdownPosition.x + 'px', top: dropdownPosition.y + 'px' }"
-        class="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-border min-w-[280px] max-h-[420px] overflow-hidden"
+        class="fixed z-[9999] glass-modal min-w-[280px] max-h-[420px] overflow-hidden"
         @click.stop
       >
         <div class="py-2 overflow-y-auto max-h-[420px]">
@@ -105,47 +112,56 @@
       </div>
     </Teleport>
 
+    <!-- Sidebar Tooltip -->
+    <Teleport to="body">
+      <div
+        v-if="tooltip.visible"
+        class="nav-tooltip"
+        :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
+      >
+        {{ tooltip.text }}
+      </div>
+    </Teleport>
+
     <!-- Main Content Area -->
-    <main class="flex-1 flex flex-col min-w-0" style="padding: 12px 12px 12px 0;">
-      <!-- The Island Container -->
-      <div class="island-container flex-1 overflow-y-auto" style="padding: 32px 40px;">
-        
-        <!-- Top Bar -->
-        <div class="flex justify-between items-center mb-8">
-          <div class="text-sm text-muted-foreground">你的工作 / {{ currentTitle }}</div>
-          <div class="flex items-center gap-3">
-            <!-- Theme Toggle -->
-            <button 
-              @click="toggleTheme"
-              class="w-9 h-9 rounded-lg hover:bg-muted flex items-center justify-center transition-colors"
-            >
-              {{ themeStore.isDark ? '🌙' : '☀️' }}
-            </button>
+    <main class="flex-1 flex flex-col gap-4 min-w-0">
+      <!-- Floating Topbar -->
+      <div class="glass-topbar flex justify-between items-center">
+        <div class="text-sm text-muted-foreground">你的工作 / {{ currentTitle }}</div>
+        <div class="flex items-center gap-3">
+          <!-- Theme Toggle -->
+          <button
+            @click="toggleTheme"
+            class="w-9 h-9 rounded-lg hover:bg-white/30 flex items-center justify-center transition-colors"
+          >
+            <component :is="themeStore.isDark ? MoonOutline : SunnyOutline" class="w-[18px] h-[18px]" />
+          </button>
 
-            <!-- User Avatar -->
-            <div v-if="accountStore.currentAccount" class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
-              {{ (accountStore.currentAccount.alias || 'U')[0].toUpperCase() }}
-            </div>
-
-            <!-- Add Account -->
-            <button 
-              v-else
-              class="btn-island-primary"
-              @click="showAccountModal = true"
-            >
-              添加账户
-            </button>
+          <!-- User Avatar -->
+          <div v-if="accountStore.currentAccount" class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
+            {{ (accountStore.currentAccount.alias || 'U')[0].toUpperCase() }}
           </div>
-        </div>
 
-        <!-- Router View -->
+          <!-- Add Account -->
+          <button
+            v-else
+            class="btn-island-primary"
+            @click="showAccountModal = true"
+          >
+            添加账户
+          </button>
+        </div>
+      </div>
+
+      <!-- The Island Container (content only) -->
+      <div class="island-container flex-1 overflow-y-auto" style="padding: 32px 40px;">
         <router-view />
       </div>
     </main>
 
     <!-- Add Account Modal -->
     <div v-if="showAccountModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showAccountModal = false">
-      <div class="bg-white rounded-2xl shadow-lg w-full max-w-xl" @click.stop style="max-height: 90vh; overflow-y: auto;">
+      <div class="glass-modal w-full max-w-xl" @click.stop style="max-height: 90vh; overflow-y: auto;">
         <div class="p-6 border-b border-border">
           <h2 class="text-xl font-semibold">添加 Cloudflare 账户</h2>
         </div>
@@ -185,11 +201,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, provide } from 'vue'
+import { ref, computed, onMounted, watch, provide, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAccountStore } from '@/stores/account'
 import { useThemeStore } from '@/stores/theme'
 import { cloudflareApi, type Zone } from '@/api'
+import {
+  HomeOutline,
+  GlobeOutline,
+  PersonOutline,
+  SettingsOutline,
+  KeyOutline,
+  ServerOutline,
+  DocumentTextOutline,
+  RocketOutline,
+  FlashOutline,
+  TimeOutline,
+  BuildOutline,
+  LockClosedOutline,
+  ShieldOutline,
+  FlameOutline,
+  TimerOutline,
+  AnalyticsOutline,
+  DocumentOutline,
+  RibbonOutline,
+  CloudOutline,
+  MoonOutline,
+  SunnyOutline,
+  ChevronBackOutline,
+  ChevronForwardOutline,
+  ChevronDownOutline,
+} from '@vicons/ionicons5'
 
 const router = useRouter()
 const route = useRoute()
@@ -204,36 +246,54 @@ const dropdownPosition = ref({ x: 0, y: 0 })
 const zones = ref<Zone[]>([])
 const currentZone = ref<Zone | null>(null)
 
+// Tooltip state
+const tooltip = ref({ visible: false, text: '', x: 0, y: 0 })
+
+function showTooltip(event: MouseEvent, text: string) {
+  if (!collapsed.value) return
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  tooltip.value = {
+    visible: true,
+    text,
+    x: rect.right + 12,
+    y: rect.top + rect.height / 2,
+  }
+}
+
+function hideTooltip() {
+  tooltip.value.visible = false
+}
+
 const accountForm = ref({
   apiToken: '',
   alias: ''
 })
 
-const mainMenuItems = [
-  { label: 'Home', path: '/dashboard', icon: '🏠' },
-  { label: '域名管理', path: '/zones', icon: '🌐' },
-  { label: '账户管理', path: '/accounts', icon: '👤' },
-  { label: 'Workers', path: '/workers', icon: '⚙️' },
-  { label: 'Workers KV', path: '/workers-kv', icon: '🔑' },
-  { label: 'D1 数据库', path: '/d1', icon: '💾' },
-  { label: '模板库', path: '/worker-templates', icon: '📝' },
-  { label: '一键加速', path: '/quick-deploy', icon: '🚀' },
-  { label: '自动优化', path: '/optimize', icon: '⚡' },
-  { label: '操作历史', path: '/history', icon: '🕒' },
+const mainMenuItems: { label: string; path: string; icon: Component }[] = [
+  { label: 'Home', path: '/dashboard', icon: HomeOutline },
+  { label: '域名管理', path: '/zones', icon: GlobeOutline },
+  { label: '账户管理', path: '/accounts', icon: PersonOutline },
+  { label: 'Workers', path: '/workers', icon: SettingsOutline },
+  { label: 'Workers KV', path: '/workers-kv', icon: KeyOutline },
+  { label: 'D1 数据库', path: '/d1', icon: ServerOutline },
+  { label: '模板库', path: '/worker-templates', icon: DocumentTextOutline },
+  { label: '一键优选', path: '/quick-deploy', icon: RocketOutline },
+  { label: '自动优化', path: '/optimize', icon: FlashOutline },
+  { label: '操作历史', path: '/history', icon: TimeOutline },
 ]
 
 const zoneMenuItems = computed(() => {
   if (!currentZone.value) return []
   return [
-    { label: 'DNS 记录', path: '/dns', icon: '🔧' },
-    { label: 'SSL/TLS', path: '/ssl', icon: '🔒' },
-    { label: '缓存', path: '/cache', icon: '⚡' },
-    { label: '防火墙', path: '/firewall', icon: '🛡️' },
-    { label: 'WAF', path: '/waf', icon: '🔥', pro: true },
-    { label: '速率限制', path: '/rate-limits', icon: '⏱️', pro: true },
-    { label: '分析', path: '/analytics', icon: '📈' },
-    { label: '页面规则', path: '/page-rules', icon: '📄' },
-    { label: '证书', path: '/certificates', icon: '🏆', pro: true },
+    { label: 'DNS 记录', path: '/dns', icon: BuildOutline },
+    { label: 'SSL/TLS', path: '/ssl', icon: LockClosedOutline },
+    { label: '缓存', path: '/cache', icon: FlashOutline },
+    { label: '防火墙', path: '/firewall', icon: ShieldOutline },
+    { label: 'WAF', path: '/waf', icon: FlameOutline, pro: true },
+    { label: '速率限制', path: '/rate-limits', icon: TimerOutline, pro: true },
+    { label: '分析', path: '/analytics', icon: AnalyticsOutline },
+    { label: '页面规则', path: '/page-rules', icon: DocumentOutline },
+    { label: '证书', path: '/certificates', icon: RibbonOutline, pro: true },
   ]
 })
 

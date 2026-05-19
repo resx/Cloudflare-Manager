@@ -13,9 +13,9 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="metric-card p-12 text-center">
-      <div class="text-4xl mb-4">⏳</div>
-      <p class="text-muted-foreground">加载域名列表...</p>
+    <div v-if="loading" class="empty-state">
+      <div class="glass-spinner"></div>
+      <p class="mt-4 text-sm text-muted-foreground">加载中...</p>
     </div>
 
     <!-- Zones Table -->
@@ -44,9 +44,9 @@
               <td class="py-3 px-4">
                 <span :class="[
                   'px-2 py-1 text-xs rounded-full',
-                  zone.status === 'active' 
-                    ? 'bg-success text-success-foreground' 
-                    : 'bg-muted text-muted-foreground'
+                  zone.status === 'active'
+                    ? 'glass-badge glass-badge-success'
+                    : 'glass-badge glass-badge-info'
                 ]">
                   {{ zone.status }}
                 </span>
@@ -74,16 +74,19 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="metric-card p-12 text-center">
-      <div class="text-5xl mb-4">🌐</div>
-      <h3 class="font-semibold mb-2">暂无域名</h3>
-      <p class="text-sm text-muted-foreground">请在 Cloudflare 控制台添加域名</p>
+    <div v-else class="empty-state">
+      <div class="empty-state-icon">
+        <component :is="GlobeOutline" class="w-7 h-7" />
+      </div>
+      <div class="empty-state-title">暂无域名</div>
+      <div class="empty-state-desc">请在 Cloudflare 控制台添加域名</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { GlobeOutline } from '@vicons/ionicons5'
 import { useRouter } from 'vue-router'
 import { cloudflareApi, type Zone } from '@/api'
 
