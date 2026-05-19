@@ -1952,4 +1952,126 @@ async function handleRequest(request) {{
 
         Err("No query results returned".to_string())
     }
+
+    // ===== Custom Hostname (SaaS 优选) =====
+
+    pub async fn list_custom_hostnames(&self, zone_id: &str) -> Result<Vec<CustomHostname>, String> {
+        let url = format!("{}/zones/{}/custom_hostnames", CLOUDFLARE_API_BASE, zone_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response.json().await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let error = json["errors"][0]["message"].as_str().unwrap_or("Unknown error");
+            return Err(error.to_string());
+        }
+
+        serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Parse error: {}", e))
+    }
+
+    pub async fn create_custom_hostname(&self, zone_id: &str, hostname: &str, ssl_method: &str) -> Result<CustomHostname, String> {
+        let url = format!("{}/zones/{}/custom_hostnames", CLOUDFLARE_API_BASE, zone_id);
+
+        let body = json!({
+            "hostname": hostname,
+            "ssl": {
+                "method": ssl_method,
+                "type": "dv",
+                "wildcard": false
+            }
+        });
+
+        let response = self.client
+            .post(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response.json().await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let error = json["errors"][0]["message"].as_str().unwrap_or("Unknown error");
+            return Err(error.to_string());
+        }
+
+        serde_json::from_value(json["result"].clone())
+            .map_err(|e| format!("Parse error: {}", e))
+    }
+
+    pub async fn delete_custom_hostname(&self, zone_id: &str, hostname_id: &str) -> Result<(), String> {
+        let url = format!("{}/zones/{}/custom_hostnames/{}", CLOUDFLARE_API_BASE, zone_id, hostname_id);
+
+        let response = self.client
+            .delete(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response.json().await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let error = json["errors"][0]["message"].as_str().unwrap_or("Unknown error");
+            return Err(error.to_string());
+        }
+
+        Ok(())
+    }
+
+    pub async fn set_fallback_origin(&self, zone_id: &str, origin: &str) -> Result<serde_json::Value, String> {
+        let url = format!("{}/zones/{}/custom_hostnames/fallback_origin", CLOUDFLARE_API_BASE, zone_id);
+
+        let body = json!({ "origin": origin });
+
+        let response = self.client
+            .put(&url)
+            .headers(self.get_headers())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response.json().await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let error = json["errors"][0]["message"].as_str().unwrap_or("Unknown error");
+            return Err(error.to_string());
+        }
+
+        Ok(json["result"].clone())
+    }
+
+    pub async fn get_fallback_origin(&self, zone_id: &str) -> Result<serde_json::Value, String> {
+        let url = format!("{}/zones/{}/custom_hostnames/fallback_origin", CLOUDFLARE_API_BASE, zone_id);
+
+        let response = self.client
+            .get(&url)
+            .headers(self.get_headers())
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let json: serde_json::Value = response.json().await
+            .map_err(|e| format!("JSON parse failed: {}", e))?;
+
+        if !json["success"].as_bool().unwrap_or(false) {
+            let error = json["errors"][0]["message"].as_str().unwrap_or("Unknown error");
+            return Err(error.to_string());
+        }
+
+        Ok(json["result"].clone())
+    }
 }

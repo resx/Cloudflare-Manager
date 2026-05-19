@@ -821,3 +821,65 @@ pub async fn execute_d1_query(req: web::Json<CloudflareRequest<ExecuteD1QueryReq
         }
     }
 }
+
+// ===== Custom Hostname (SaaS 优选) =====
+
+pub async fn list_custom_hostnames(req: web::Json<CloudflareRequest<GetCustomHostnamesRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.list_custom_hostnames(&req.data.zone_id).await {
+        Ok(hostnames) => HttpResponse::Ok().json(ApiResponse::success(hostnames)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+pub async fn create_custom_hostname(req: web::Json<CloudflareRequest<CreateCustomHostnameRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.create_custom_hostname(&req.data.zone_id, &req.data.hostname, &req.data.ssl_method).await {
+        Ok(hostname) => HttpResponse::Ok().json(ApiResponse::success(hostname)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+pub async fn delete_custom_hostname(req: web::Json<CloudflareRequest<DeleteCustomHostnameRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.delete_custom_hostname(&req.data.zone_id, &req.data.hostname_id).await {
+        Ok(_) => HttpResponse::Ok().json(ApiResponse::success(serde_json::json!({"deleted": true}))),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+pub async fn set_fallback_origin(req: web::Json<CloudflareRequest<SetFallbackOriginRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.set_fallback_origin(&req.data.zone_id, &req.data.origin).await {
+        Ok(result) => HttpResponse::Ok().json(ApiResponse::success(result)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}
+
+pub async fn get_fallback_origin(req: web::Json<CloudflareRequest<GetFallbackOriginRequest>>) -> impl Responder {
+    let client = match CloudflareClient::new(&req.credentials) {
+        Ok(c) => c,
+        Err(e) => return HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    };
+
+    match client.get_fallback_origin(&req.data.zone_id).await {
+        Ok(result) => HttpResponse::Ok().json(ApiResponse::success(result)),
+        Err(e) => HttpResponse::BadRequest().json(ApiResponse::<()>::error(e)),
+    }
+}

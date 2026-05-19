@@ -809,7 +809,34 @@ export const cloudflareApi = {
   async executeD1Query(request: ExecuteD1QueryRequest): Promise<D1QueryResult> {
     const res = await api.post('/cloudflare/d1/query', request)
     return res.data
-  }
+  },
+
+  // ===== Custom Hostname (SaaS 优选) =====
+
+  async listCustomHostnames(zoneId: string) {
+    const res = await api.post('/cloudflare/custom-hostnames', { zoneId })
+    return res.data
+  },
+
+  async createCustomHostname(zoneId: string, hostname: string, sslMethod = 'txt') {
+    const res = await api.post('/cloudflare/custom-hostnames/create', { zoneId, hostname, ssl_method: sslMethod })
+    return res.data
+  },
+
+  async deleteCustomHostname(zoneId: string, hostnameId: string) {
+    const res = await api.post('/cloudflare/custom-hostnames/delete', { zoneId, hostnameId })
+    return res.data
+  },
+
+  async getFallbackOrigin(zoneId: string) {
+    const res = await api.post('/cloudflare/custom-hostnames/fallback-origin', { zoneId })
+    return res.data
+  },
+
+  async setFallbackOrigin(zoneId: string, origin: string) {
+    const res = await api.post('/cloudflare/custom-hostnames/fallback-origin/set', { zoneId, origin })
+    return res.data
+  },
 }
 
 export default api

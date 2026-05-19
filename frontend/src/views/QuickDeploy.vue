@@ -148,7 +148,7 @@
           <component :is="ServerOutline" class="w-5 h-5 text-primary" /> 配置回退源
         </h3>
         <div class="space-y-4">
-          <p class="text-sm text-muted-foreground">回退源是自定义主机名流量的目标地址。需要创建一条代理的 DNS 记录指向您的源站。</p>
+          <p class="text-sm text-muted-foreground">回退源是自定义主机名流量的目标地址。平台将自动创建 DNS 记录并设置回退源。</p>
           <div>
             <label class="block text-sm font-medium mb-2">回退源子域名 *</label>
             <input v-model="saasForm.fallbackDomain" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="fallback.example.com" />
@@ -158,16 +158,12 @@
             <label class="block text-sm font-medium mb-2">源站 IP 地址 *</label>
             <input v-model="saasForm.originIP" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="1.2.3.4" />
           </div>
-          <div class="alert-info text-sm">
-            <p class="font-medium mb-1">需要手动操作：</p>
-            <p>在 Cloudflare Dashboard → SSL/TLS → 自定义主机名 页面，将 <code class="bg-muted px-1 rounded">{{ saasForm.fallbackDomain || 'fallback.example.com' }}</code> 设置为回退源。</p>
-          </div>
           <div class="flex justify-between pt-2">
             <button class="btn-island-secondary" @click="saasStep = 0">上一步</button>
-            <div class="flex gap-3">
-              <button class="btn-island-secondary" @click="createFallbackDns" :disabled="!saasForm.fallbackDomain || !saasForm.originIP">创建 DNS 记录</button>
-              <button class="btn-island-primary" @click="saasStep = 2">下一步</button>
-            </div>
+            <button class="btn-island-primary" @click="autoSetupFallback" :disabled="!saasForm.fallbackDomain || !saasForm.originIP || saasLoading">
+              <template v-if="saasLoading">配置中...</template>
+              <template v-else>自动配置回退源</template>
+            </button>
           </div>
         </div>
       </div>
@@ -178,24 +174,18 @@
           <component :is="LinkOutline" class="w-5 h-5 text-primary" /> 添加自定义主机名
         </h3>
         <div class="space-y-4">
-          <p class="text-sm text-muted-foreground">在 Cloudflare Dashboard 中添加自定义主机名，将用户的访问域名关联到您的回退源。</p>
+          <p class="text-sm text-muted-foreground">创建自定义主机名并自动添加验证 DNS 记录，完成域名所有权验证。</p>
           <div>
             <label class="block text-sm font-medium mb-2">优选访问域名 *</label>
             <input v-model="saasForm.customHostname" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="cdn.yourdomain.com" />
             <p class="text-xs text-muted-foreground mt-1">用户最终通过此域名访问您的网站</p>
           </div>
-          <div class="alert-info text-sm">
-            <p class="font-medium mb-2">在 Cloudflare Dashboard 操作：</p>
-            <ol class="list-decimal list-inside space-y-1">
-              <li>进入 SSL/TLS → 自定义主机名 → 添加自定义主机名</li>
-              <li>输入域名：<code class="bg-muted px-1 rounded cursor-pointer" @click="copyText(saasForm.customHostname)">{{ saasForm.customHostname || 'cdn.yourdomain.com' }}</code></li>
-              <li>验证方式选择 TXT 记录</li>
-              <li>将 Cloudflare 提供的 TXT 验证记录添加到您的 DNS</li>
-            </ol>
-          </div>
           <div class="flex justify-between pt-2">
             <button class="btn-island-secondary" @click="saasStep = 1">上一步</button>
-            <button class="btn-island-primary" @click="saasStep = 3">下一步</button>
+            <button class="btn-island-primary" @click="autoCreateHostname" :disabled="!saasForm.customHostname || saasLoading">
+              <template v-if="saasLoading">创建中...</template>
+              <template v-else>自动创建并验证</template>
+            </button>
           </div>
         </div>
       </div>
@@ -206,7 +196,7 @@
           <component :is="GlobeOutline" class="w-5 h-5 text-primary" /> DNS 优选配置
         </h3>
         <div class="space-y-4">
-          <p class="text-sm text-muted-foreground">将访问域名的 DNS 指向优选 CNAME 或 IP，让用户连接到最快的 Cloudflare 节点。</p>
+          <p class="text-sm text-muted-foreground">将访问域名指向优选节点，平台将自动创建对应的 DNS 记录。</p>
           <div>
             <label class="block text-sm font-medium mb-2">优选方式</label>
             <select v-model="saasForm.optimizeType" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
@@ -225,21 +215,12 @@
             <label class="block text-sm font-medium mb-2">优选 IP 地址</label>
             <input v-model="saasForm.optimizeIP" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="104.16.x.x" />
           </div>
-          <div class="alert-warning text-sm">
-            <p class="font-medium mb-1">DNS 配置说明：</p>
-            <p>在 <code class="bg-muted px-1 rounded">{{ saasForm.customHostname || 'cdn.yourdomain.com' }}</code> 的 DNS 管理处，添加以下记录（不开启代理/灰色云朵）：</p>
-            <div class="mt-2 bg-muted/50 p-3 rounded-lg font-mono text-xs">
-              <template v-if="saasForm.optimizeType === 'cname'">
-                {{ saasForm.customHostname || 'cdn' }} CNAME {{ resolvedCname }}
-              </template>
-              <template v-else>
-                {{ saasForm.customHostname || 'cdn' }} A {{ saasForm.optimizeIP || '104.16.x.x' }}
-              </template>
-            </div>
-          </div>
           <div class="flex justify-between pt-2">
             <button class="btn-island-secondary" @click="saasStep = 2">上一步</button>
-            <button class="btn-island-primary" @click="saasStep = 4">完成配置</button>
+            <button class="btn-island-primary" @click="autoCreateOptimizeDns" :disabled="saasLoading">
+              <template v-if="saasLoading">配置中...</template>
+              <template v-else>自动配置优选 DNS</template>
+            </button>
           </div>
         </div>
       </div>
@@ -333,6 +314,7 @@ const workerForm = ref({
 // SaaS form
 const saasStep = ref(0)
 const saasSteps = ['前置准备', '配置回退源', '自定义主机名', 'DNS 优选', '完成']
+const saasLoading = ref(false)
 const saasForm = ref({
   fallbackDomain: '',
   originIP: '',
@@ -341,6 +323,7 @@ const saasForm = ref({
   optimizeCname: 'cdn.anycast.eu.org',
   customCname: '',
   optimizeIP: '',
+  hostnameResult: null as any,
 })
 
 const cnamePresets = [
@@ -391,30 +374,130 @@ async function handleRequest(request) {
 }
 
 function copyText(text: string) {
+  if (!text) return
   navigator.clipboard.writeText(text)
   toast.success('已复制到剪贴板')
 }
 
-async function createFallbackDns() {
+async function findZoneForDomain(domain: string) {
+  const zones = await cloudflareApi.getZones()
+  const parts = domain.split('.')
+  for (let i = 0; i < parts.length - 1; i++) {
+    const candidate = parts.slice(i).join('.')
+    const zone = zones.find((z: { name: string }) => z.name === candidate)
+    if (zone) return zone
+  }
+  return null
+}
+
+async function autoSetupFallback() {
+  saasLoading.value = true
   try {
-    const zones = await cloudflareApi.getZones()
-    const domain = saasForm.value.fallbackDomain
-    const rootDomain = domain.split('.').slice(-2).join('.')
-    const zone = zones.find((z: { name: string }) => z.name === rootDomain)
+    const zone = await findZoneForDomain(saasForm.value.fallbackDomain)
     if (!zone) {
       toast.error('未找到对应域名，请确认域名已添加到 Cloudflare')
       return
     }
+    // 1. 创建 A 记录指向源站（开启代理）
     await cloudflareApi.createDnsRecord({
       zoneId: zone.id,
       type: 'A',
-      name: domain,
+      name: saasForm.value.fallbackDomain,
       content: saasForm.value.originIP,
       proxied: true,
     })
-    toast.success('DNS 记录创建成功')
+    // 2. 设置为回退源
+    await cloudflareApi.setFallbackOrigin(zone.id, saasForm.value.fallbackDomain)
+    toast.success('回退源配置完成')
+    saasStep.value = 2
   } catch (error: any) {
-    toast.error(error.message || '创建 DNS 记录失败')
+    toast.error(error.message || '配置回退源失败')
+  } finally {
+    saasLoading.value = false
+  }
+}
+
+async function autoCreateHostname() {
+  saasLoading.value = true
+  try {
+    const zone = await findZoneForDomain(saasForm.value.fallbackDomain)
+    if (!zone) {
+      toast.error('未找到对应域名')
+      return
+    }
+    // 1. 创建自定义主机名
+    const result = await cloudflareApi.createCustomHostname(zone.id, saasForm.value.customHostname)
+    saasForm.value.hostnameResult = result
+
+    // 2. 自动添加验证 TXT 记录
+    const validationRecords = result?.ssl?.validation_records || []
+    const hostnameZone = await findZoneForDomain(saasForm.value.customHostname)
+
+    if (hostnameZone && validationRecords.length > 0) {
+      for (const rec of validationRecords) {
+        if (rec.txt_name && rec.txt_value) {
+          await cloudflareApi.createDnsRecord({
+            zoneId: hostnameZone.id,
+            type: 'TXT',
+            name: rec.txt_name,
+            content: rec.txt_value,
+            proxied: false,
+          })
+        }
+        if (rec.cname && rec.cname_target) {
+          await cloudflareApi.createDnsRecord({
+            zoneId: hostnameZone.id,
+            type: 'CNAME',
+            name: rec.cname,
+            content: rec.cname_target,
+            proxied: false,
+          })
+        }
+      }
+      toast.success('自定义主机名创建成功，验证记录已自动添加')
+    } else {
+      toast.success('自定义主机名创建成功')
+    }
+    saasStep.value = 3
+  } catch (error: any) {
+    toast.error(error.message || '创建自定义主机名失败')
+  } finally {
+    saasLoading.value = false
+  }
+}
+
+async function autoCreateOptimizeDns() {
+  saasLoading.value = true
+  try {
+    const zone = await findZoneForDomain(saasForm.value.customHostname)
+    if (!zone) {
+      toast.error('未找到访问域名对应的 Zone，请确认域名已添加到 Cloudflare')
+      return
+    }
+
+    if (saasForm.value.optimizeType === 'cname') {
+      await cloudflareApi.createDnsRecord({
+        zoneId: zone.id,
+        type: 'CNAME',
+        name: saasForm.value.customHostname,
+        content: resolvedCname.value,
+        proxied: false,
+      })
+    } else {
+      await cloudflareApi.createDnsRecord({
+        zoneId: zone.id,
+        type: 'A',
+        name: saasForm.value.customHostname,
+        content: saasForm.value.optimizeIP,
+        proxied: false,
+      })
+    }
+    toast.success('优选 DNS 记录创建成功')
+    saasStep.value = 4
+  } catch (error: any) {
+    toast.error(error.message || '创建优选 DNS 记录失败')
+  } finally {
+    saasLoading.value = false
   }
 }
 

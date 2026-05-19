@@ -121,6 +121,12 @@ async fn main() -> std::io::Result<()> {
                     .route("/d1/databases/create", web::post().to(handlers::create_d1_database))
                     .route("/d1/databases/delete", web::post().to(handlers::delete_d1_database))
                     .route("/d1/query", web::post().to(handlers::execute_d1_query))
+                    // Custom Hostname (SaaS 优选) routes
+                    .route("/custom-hostnames", web::post().to(handlers::list_custom_hostnames))
+                    .route("/custom-hostnames/create", web::post().to(handlers::create_custom_hostname))
+                    .route("/custom-hostnames/delete", web::post().to(handlers::delete_custom_hostname))
+                    .route("/custom-hostnames/fallback-origin", web::post().to(handlers::get_fallback_origin))
+                    .route("/custom-hostnames/fallback-origin/set", web::post().to(handlers::set_fallback_origin))
             )
     })
     .bind(&bind_addr)?

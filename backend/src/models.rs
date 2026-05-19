@@ -743,3 +743,82 @@ impl<T> ApiResponse<T> {
         }
     }
 }
+
+// ===== Custom Hostname (SaaS 优选) =====
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CustomHostname {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    pub hostname: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssl: Option<CustomHostnameSsl>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification_errors: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CustomHostnameSsl {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub ssl_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validation_records: Option<Vec<SslValidationRecord>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SslValidationRecord {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub txt_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub txt_value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cname_target: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateCustomHostnameRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    pub hostname: String,
+    #[serde(default = "default_ssl_method")]
+    pub ssl_method: String,
+}
+
+fn default_ssl_method() -> String {
+    "txt".to_string()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetCustomHostnamesRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeleteCustomHostnameRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    #[serde(alias = "hostnameId")]
+    pub hostname_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetFallbackOriginRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+    pub origin: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetFallbackOriginRequest {
+    #[serde(alias = "zoneId")]
+    pub zone_id: String,
+}
