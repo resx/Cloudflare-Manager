@@ -2,8 +2,8 @@
   <!-- Worker Templates - Island Theme with Full Library -->
   <div class="animate-in">
     <div class="mb-6">
-      <h1 class="text-2xl font-semibold">Worker 模板库</h1>
-      <p class="text-sm text-muted-foreground mt-1">快速开始使用预建的 Worker 模板</p>
+      <h1 class="text-2xl font-semibold">{{ t('workerTemplates.title') }}</h1>
+      <p class="text-sm text-muted-foreground mt-1">{{ t('workerTemplates.subtitle') }}</p>
     </div>
 
     <!-- Search & Filter -->
@@ -11,20 +11,20 @@
       <div class="flex gap-4">
         <input
           v-model="searchQuery"
-          placeholder="搜索模板..."
+          :placeholder="t('workerTemplates.searchPlaceholder')"
           class="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
         <select
           v-model="categoryFilter"
           class="px-3 py-2 bg-background border border-border rounded-lg text-sm"
         >
-          <option value="">全部分类</option>
-          <option value="入门">入门</option>
-          <option value="API">API</option>
-          <option value="性能">性能</option>
-          <option value="安全">安全</option>
-          <option value="媒体">媒体</option>
-          <option value="实验">实验</option>
+          <option value="">{{ t('workerTemplates.allCategories') }}</option>
+          <option value="Starter">{{ t('workerTemplates.cat.starter') }}</option>
+          <option value="API">{{ t('workerTemplates.cat.api') }}</option>
+          <option value="Performance">{{ t('workerTemplates.cat.performance') }}</option>
+          <option value="Security">{{ t('workerTemplates.cat.security') }}</option>
+          <option value="Media">{{ t('workerTemplates.cat.media') }}</option>
+          <option value="Experiment">{{ t('workerTemplates.cat.experiment') }}</option>
         </select>
       </div>
     </div>
@@ -79,13 +79,13 @@
         <div class="p-6 space-y-6">
           <!-- Description -->
           <div>
-            <h3 class="font-semibold mb-2">描述</h3>
+            <h3 class="font-semibold mb-2">{{ t('workerTemplates.descHeader') }}</h3>
             <p class="text-sm text-muted-foreground">{{ selectedTemplate.fullDescription }}</p>
           </div>
 
           <!-- Features -->
           <div v-if="selectedTemplate.features">
-            <h3 class="font-semibold mb-2">功能特性</h3>
+            <h3 class="font-semibold mb-2">{{ t('workerTemplates.featHeader') }}</h3>
             <ul class="space-y-1 text-sm text-muted-foreground">
               <li v-for="feature in selectedTemplate.features" :key="feature" class="flex items-start gap-2">
                 <component :is="CheckmarkOutline" class="w-4 h-4 text-primary inline mt-0.5" />
@@ -96,17 +96,17 @@
 
           <!-- Code Preview -->
           <div>
-            <h3 class="font-semibold mb-2">代码预览</h3>
+            <h3 class="font-semibold mb-2">{{ t('workerTemplates.codeHeader') }}</h3>
             <pre class="bg-muted p-4 rounded-lg text-xs overflow-x-auto"><code>{{ selectedTemplate.code }}</code></pre>
           </div>
         </div>
 
         <div class="p-6 border-t border-border flex justify-end gap-3">
           <button class="btn-island-secondary" @click="copyCode(selectedTemplate.code)">
-            复制代码
+            {{ t('workerTemplates.copyCode') }}
           </button>
           <button class="btn-island-primary" @click="useTemplate(selectedTemplate)">
-            使用模板
+            {{ t('workerTemplates.useTemplate') }}
           </button>
         </div>
       </div>
@@ -117,6 +117,7 @@
 <script setup lang="ts">
 import { ref, computed, type Component } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { toast } from '@/utils/toast'
 import { HandLeftOutline, EnterOutline, FlashOutline, LockClosedOutline, ImageOutline, BeakerOutline, CheckmarkOutline } from '@vicons/ionicons5'
 
@@ -132,24 +133,25 @@ interface WorkerTemplate {
   code: string
 }
 
+const { t } = useI18n()
 const router = useRouter()
 const searchQuery = ref('')
 const categoryFilter = ref('')
 const selectedTemplate = ref<WorkerTemplate | null>(null)
 
-const templates = ref<WorkerTemplate[]>([
+const templates = computed<WorkerTemplate[]>(() => [
   {
     id: '1',
-    name: 'Hello World',
-    description: '最简单的 Worker 示例，返回一个 Hello World 响应',
-    fullDescription: '这是一个最基础的 Worker 模板，演示了如何创建一个简单的 HTTP 响应。适合初学者了解 Workers 的基本结构。',
-    category: '入门',
-    difficulty: '简单',
+    name: t('workerTemplates.t1.name'),
+    description: t('workerTemplates.t1.desc'),
+    fullDescription: t('workerTemplates.t1.fullDesc'),
+    category: t('workerTemplates.cat.starter'),
+    difficulty: t('workerTemplates.diff.easy'),
     icon: HandLeftOutline,
     features: [
-      '基础的事件监听器',
-      'Response 对象使用',
-      '简单的HTTP响应',
+      t('workerTemplates.t1.feat1'),
+      t('workerTemplates.t1.feat2'),
+      t('workerTemplates.t1.feat3'),
     ],
     code: `addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
@@ -163,17 +165,17 @@ async function handleRequest(request) {
   },
   {
     id: '2',
-    name: 'API Gateway',
-    description: 'RESTful API 网关，支持路由分发和请求转发',
-    fullDescription: 'API 网关模板提供了路由匹配、请求转发和错误处理功能，可以作为微服务架构的入口。',
-    category: 'API',
-    difficulty: '中等',
+    name: t('workerTemplates.t2.name'),
+    description: t('workerTemplates.t2.desc'),
+    fullDescription: t('workerTemplates.t2.fullDesc'),
+    category: t('workerTemplates.cat.api'),
+    difficulty: t('workerTemplates.diff.medium'),
     icon: EnterOutline,
     features: [
-      '路由匹配和分发',
-      'JSON 响应处理',
-      'CORS 支持',
-      '错误处理',
+      t('workerTemplates.t2.feat1'),
+      t('workerTemplates.t2.feat2'),
+      t('workerTemplates.t2.feat3'),
+      t('workerTemplates.t2.feat4'),
     ],
     code: `addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
@@ -215,17 +217,17 @@ async function handlePosts(request) {
   },
   {
     id: '3',
-    name: 'CDN 加速',
-    description: '内容分发和缓存优化，提升网站访问速度',
-    fullDescription: '通过边缘缓存和智能路由，显著提升静态资源的访问速度。支持自定义缓存策略和缓存清除。',
-    category: '性能',
-    difficulty: '中等',
+    name: t('workerTemplates.t3.name'),
+    description: t('workerTemplates.t3.desc'),
+    fullDescription: t('workerTemplates.t3.fullDesc'),
+    category: t('workerTemplates.cat.performance'),
+    difficulty: t('workerTemplates.diff.medium'),
     icon: FlashOutline,
     features: [
-      '边缘缓存',
-      '自定义 TTL',
-      '缓存头优化',
-      '源站保护',
+      t('workerTemplates.t3.feat1'),
+      t('workerTemplates.t3.feat2'),
+      t('workerTemplates.t3.feat3'),
+      t('workerTemplates.t3.feat4'),
     ],
     code: `addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
@@ -266,17 +268,17 @@ async function handleRequest(request) {
   },
   {
     id: '4',
-    name: 'JWT 身份验证',
-    description: 'JWT Token 验证和用户身份认证',
-    fullDescription: '实现基于 JWT 的身份验证系统，保护 API 端点，验证用户令牌。',
-    category: '安全',
-    difficulty: '高级',
+    name: t('workerTemplates.t4.name'),
+    description: t('workerTemplates.t4.desc'),
+    fullDescription: t('workerTemplates.t4.fullDesc'),
+    category: t('workerTemplates.cat.security'),
+    difficulty: t('workerTemplates.diff.hard'),
     icon: LockClosedOutline,
     features: [
-      'JWT 解析和验证',
-      '权限检查',
-      '令牌刷新',
-      '安全头设置',
+      t('workerTemplates.t4.feat1'),
+      t('workerTemplates.t4.feat2'),
+      t('workerTemplates.t4.feat3'),
+      t('workerTemplates.t4.feat4'),
     ],
     code: `addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
@@ -320,17 +322,17 @@ async function verifyJWT(token) {
   },
   {
     id: '5',
-    name: '图片优化',
-    description: '自动图片格式转换和尺寸优化',
-    fullDescription: '利用 Cloudflare Image Resizing 实现图片自动优化，支持 WebP、AVIF 格式转换和智能裁剪。',
-    category: '媒体',
-    difficulty: '中等',
+    name: t('workerTemplates.t5.name'),
+    description: t('workerTemplates.t5.desc'),
+    fullDescription: t('workerTemplates.t5.fullDesc'),
+    category: t('workerTemplates.cat.media'),
+    difficulty: t('workerTemplates.diff.medium'),
     icon: ImageOutline,
     features: [
-      '自动格式转换',
-      '尺寸调整',
-      '质量优化',
-      '懒加载支持',
+      t('workerTemplates.t5.feat1'),
+      t('workerTemplates.t5.feat2'),
+      t('workerTemplates.t5.feat3'),
+      t('workerTemplates.t5.feat4'),
     ],
     code: `addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
@@ -363,17 +365,17 @@ async function handleRequest(request) {
   },
   {
     id: '6',
-    name: 'A/B 测试',
-    description: '流量分割和 A/B 测试实验',
-    fullDescription: '实现流量分割，支持多变量测试，帮助优化转化率和用户体验。',
-    category: '实验',
-    difficulty: '中等',
+    name: t('workerTemplates.t6.name'),
+    description: t('workerTemplates.t6.desc'),
+    fullDescription: t('workerTemplates.t6.fullDesc'),
+    category: t('workerTemplates.cat.experiment'),
+    difficulty: t('workerTemplates.diff.medium'),
     icon: BeakerOutline,
     features: [
-      '流量随机分配',
-      '多变量支持',
-      'Cookie 持久化',
-      '统计数据收集',
+      t('workerTemplates.t6.feat1'),
+      t('workerTemplates.t6.feat2'),
+      t('workerTemplates.t6.feat3'),
+      t('workerTemplates.t6.feat4'),
     ],
     code: `addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
@@ -413,7 +415,8 @@ const filteredTemplates = computed(() => {
   return templates.value.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                          template.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesCategory = !categoryFilter.value || template.category === categoryFilter.value
+    const matchesCategory = !categoryFilter.value || 
+                            template.category === t(`workerTemplates.cat.${categoryFilter.value.toLowerCase()}`)
     return matchesSearch && matchesCategory
   })
 })
@@ -424,7 +427,7 @@ function viewTemplate(template: WorkerTemplate) {
 
 function copyCode(code: string) {
   navigator.clipboard.writeText(code)
-  toast.success('代码已复制到剪贴板')
+  toast.success(t('workerTemplates.copySuccess'))
 }
 
 function useTemplate(template: WorkerTemplate) {
@@ -434,7 +437,7 @@ function useTemplate(template: WorkerTemplate) {
     script: template.code,
   }))
   
-  toast.success('模板已保存，正在跳转到 Workers 页面...')
+  toast.success(t('workerTemplates.useSuccess'))
   setTimeout(() => {
     router.push('/workers')
   }, 1000)

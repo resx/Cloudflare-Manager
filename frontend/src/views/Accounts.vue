@@ -1,227 +1,344 @@
 <template>
-  <!-- Accounts Management - Island Theme -->
-  <div class="animate-in">
-    <div class="flex justify-between items-center mb-6">
+  <div class="animate-in space-y-8">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-1">
       <div>
-        <h1 class="text-2xl font-semibold">账户管理</h1>
-        <p class="text-sm text-muted-foreground mt-1">管理您的 Cloudflare API 账户</p>
+        <h1 class="text-3xl font-bold text-foreground tracking-tight">{{ t('accounts.title') }}</h1>
+        <p class="text-sm text-muted-foreground mt-1 font-medium italic">{{ t('accounts.subtitle') }}</p>
       </div>
-      <div class="flex gap-3">
-        <button class="btn-island-secondary text-sm" @click="exportAccounts">
-          <component :is="CloudUploadOutline" class="w-4 h-4 mr-1" /> 导出
-        </button>
-        <button class="btn-island-secondary text-sm" @click="showImportModal = true">
-          <component :is="CloudDownloadOutline" class="w-4 h-4 mr-1" /> 导入
-        </button>
-        <button class="btn-island-primary" @click="showAddModal = true">
-          <span class="text-lg mr-2">+</span>
-          添加账户
-        </button>
+      <div class="flex flex-wrap gap-2">
+        <IslandButton variant="ghost" size="small" @click="exportAccounts">
+          <template #icon><component :is="CloudUploadOutline" class="w-4 h-4" /></template>
+          {{ t('accounts.export') }}
+        </IslandButton>
+        <IslandButton variant="ghost" size="small" @click="showImportModal = true">
+          <template #icon><component :is="CloudDownloadOutline" class="w-4 h-4" /></template>
+          {{ t('accounts.import') }}
+        </IslandButton>
+        <IslandButton @click="showAddModal = true">
+          <template #icon><component :is="AddOutline" class="w-4 h-4" /></template>
+          {{ t('accounts.addAccount') }}
+        </IslandButton>
       </div>
-    </div>
+    </header>
+
+    <!-- Privacy Alert Card -->
+    <GlassCard class="bg-primary/5 border-primary/20" :padding="6">
+      <div class="flex gap-5 items-start">
+        <div class="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shrink-0 shadow-inner">
+          <component :is="ShieldCheckmarkOutline" class="w-6 h-6" />
+        </div>
+        <div class="space-y-1">
+          <h3 class="font-bold text-primary">{{ t('accounts.privacyTitle') }}</h3>
+          <p class="text-sm text-muted-foreground leading-relaxed" v-html="t('accounts.privacyDesc')">
+          </p>
+          <div class="flex gap-4 mt-3">
+            <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              <div class="w-1.5 h-1.5 rounded-full bg-current"></div>
+              {{ t('accounts.privacyRiskFree') }}
+            </div>
+            <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              <div class="w-1.5 h-1.5 rounded-full bg-current"></div>
+              {{ t('accounts.privacyControl') }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </GlassCard>
 
     <!-- Accounts Grid -->
-    <div v-if="accountStore.accounts.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      <div 
+    <div v-if="accountStore.accounts.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <GlassCard 
         v-for="account in accountStore.accounts" 
         :key="account.id"
         :class="[
-          'metric-card p-6 cursor-pointer transition-all',
-          accountStore.currentAccount?.id === account.id ? 'border-primary' : 'hover:border-primary/50'
+          'group relative overflow-hidden transition-all duration-500 hover:scale-[1.02]',
+          accountStore.currentAccount?.id === account.id ? 'ring-2 ring-primary border-primary/50 bg-primary/[0.02]' : 'hover:border-primary/30'
         ]"
+        :padding="0"
         @click="switchAccount(account.id)"
       >
-        <!-- Account Avatar -->
-        <div class="flex items-start justify-between mb-4">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold" 
-               :style="{ backgroundColor: getAccountColor(account.id) + '20', color: getAccountColor(account.id) }">
-            {{ account.alias[0].toUpperCase() }}
-          </div>
-          <button 
-            @click.stop="deleteAccount(account.id)"
-            class="text-muted-foreground hover:text-red-600 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-          </button>
-        </div>
+        <!-- Selection Glow -->
+        <div v-if="accountStore.currentAccount?.id === account.id" class="absolute -top-12 -right-12 w-24 h-24 bg-primary/20 blur-3xl rounded-full"></div>
 
-        <!-- Account Info -->
-        <h3 class="font-semibold mb-2">{{ account.alias }}</h3>
-        <div class="text-xs text-muted-foreground space-y-1">
-          <div class="flex items-center">
-            <component :is="KeyOutline" class="w-4 h-4 mr-2" />
-            <span>Token: {{ maskToken(account.apiToken) }}</span>
+        <div class="p-6">
+          <div class="flex items-start justify-between mb-6">
+            <div 
+              class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black shadow-lg transition-transform group-hover:rotate-3" 
+              :style="{ background: `linear-gradient(135deg, ${getAccountColor(account.id)}, ${getAccountColor(account.id)}dd)`, color: '#fff' }"
+            >
+              {{ account.alias[0].toUpperCase() }}
+            </div>
+            <div class="flex gap-1">
+              <button 
+                @click.stop="editAccount(account)"
+                class="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                :title="t('common.edit')"
+              >
+                <component :is="BuildOutline" class="w-4 h-4" />
+              </button>
+              <button 
+                @click.stop="copyId(account.accountId)"
+                class="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                :title="t('accounts.copyId')"
+              >
+                <component :is="CopyOutline" class="w-4 h-4" />
+              </button>
+              <button 
+                @click.stop="deleteAccount(account.id)"
+                class="p-2 text-muted-foreground hover:text-danger hover:bg-danger/10 rounded-lg transition-all"
+                :title="t('accounts.remove')"
+              >
+                <component :is="TrashOutline" class="w-4 h-4" />
+              </button>
+            </div>
           </div>
-          <div v-if="account.accountId" class="flex items-center">
-            <component :is="FingerPrintOutline" class="w-4 h-4 mr-2" />
-            <span>ID: {{ account.accountId.substring(0, 8) }}...</span>
-          </div>
-        </div>
 
-        <!-- Active Badge -->
-        <div v-if="accountStore.currentAccount?.id === account.id" class="mt-4">
-          <span class="glass-badge glass-badge-success">
-            当前使用
-          </span>
+          <div class="space-y-1">
+            <h3 class="font-bold text-lg text-foreground truncate pr-8">{{ account.alias }}</h3>
+            <p class="text-xs text-muted-foreground font-mono truncate opacity-60">{{ account.accountId || t('accounts.idNotLoaded') }}</p>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-border/30 space-y-3">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-muted-foreground font-medium">{{ t('accounts.authMethod') }}</span>
+              <span class="text-foreground font-mono bg-foreground/5 px-2 py-0.5 rounded">API Token</span>
+            </div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-muted-foreground font-medium">{{ t('accounts.tokenMask') }}</span>
+              <span class="text-foreground font-mono tracking-wider">{{ maskToken(account.apiToken) }}</span>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <div v-if="accountStore.currentAccount?.id === account.id" class="flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-xl text-xs font-bold shadow-lg shadow-primary/20">
+              <component :is="CheckmarkCircleOutline" class="w-4 h-4" />
+              {{ t('accounts.active') }}
+            </div>
+            <IslandButton v-else variant="ghost" class="w-full" @click.stop="switchAccount(account.id)">
+              {{ t('accounts.switchTo') }}
+            </IslandButton>
+          </div>
         </div>
-      </div>
+      </GlassCard>
     </div>
 
     <!-- Empty State -->
-    <div v-else class="empty-state">
-      <div class="empty-state-icon">
-        <component :is="PersonOutline" class="w-7 h-7" />
-      </div>
-      <div class="empty-state-title">暂无账户</div>
-      <div class="empty-state-desc">添加您的第一个 Cloudflare 账户开始使用</div>
-      <button class="btn-island-primary" @click="showAddModal = true">
-        添加账户
-      </button>
-    </div>
-
-    <!-- Account Info Section -->
-    <div v-if="accountStore.currentAccount" class="mt-8">
-      <h2 class="text-lg font-semibold mb-4">当前账户信息</h2>
-      <div class="metric-card p-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <div class="text-sm text-muted-foreground mb-1">账户别名</div>
-            <div class="font-medium">{{ accountStore.currentAccount.alias }}</div>
-          </div>
-          <div>
-            <div class="text-sm text-muted-foreground mb-1">账户 ID</div>
-            <div class="font-mono text-sm">{{ accountStore.currentAccount.accountId || '加载中...' }}</div>
-          </div>
-          <div>
-            <div class="text-sm text-muted-foreground mb-1">API Token</div>
-            <div class="font-mono text-sm">{{ maskToken(accountStore.currentAccount.apiToken) }}</div>
-          </div>
+    <div v-else class="py-32 flex flex-col items-center text-center">
+      <GlassCard class="p-12 max-w-md">
+        <div class="w-20 h-20 rounded-3xl bg-muted flex items-center justify-center text-muted-foreground mb-6 mx-auto">
+          <component :is="PersonOutline" class="w-10 h-10" />
         </div>
-      </div>
+        <h3 class="text-2xl font-bold">{{ t('accounts.noAccounts') }}</h3>
+        <p class="text-sm text-muted-foreground mt-3 leading-relaxed">
+          {{ t('accounts.noAccountsDesc') }}
+        </p>
+        <IslandButton class="mt-8 w-full" @click="showAddModal = true">
+          {{ t('accounts.getStarted') }}
+        </IslandButton>
+      </GlassCard>
     </div>
 
-    <!-- Add Account Modal -->
-    <div v-if="showAddModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showAddModal = false">
-      <div class="glass-modal w-full max-w-xl" @click.stop>
-        <div class="p-6 border-b border-border">
-          <h2 class="text-xl font-semibold">添加 Cloudflare 账户</h2>
+    <!-- Modals -->
+    <n-modal v-model:show="showModal">
+      <GlassCard class="w-[500px] max-w-[95vw]" :padding="0">
+        <div class="p-6 border-b border-border/50 flex justify-between items-center">
+          <h2 class="text-xl font-bold">{{ editingId ? t('accounts.editTitle') : t('accounts.addTitle') }}</h2>
+          <button @click="closeModal" class="text-muted-foreground hover:text-foreground p-1">
+            <component :is="CloseOutline" class="w-5 h-5" />
+          </button>
         </div>
         
-        <div class="p-6 space-y-4">
-          <div class="alert-warning">
-            <strong>安全提示：</strong>请使用 API Token 而不是 Global API Key
+        <div class="p-8 space-y-6">
+          <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-600 dark:text-amber-400 text-xs leading-relaxed flex gap-3">
+            <component :is="ShieldOutline" class="w-5 h-5 shrink-0" />
+            <div>
+              <strong>{{ t('accounts.securityTipTitle') }}</strong> 
+              {{ t('accounts.securityTipDesc') }}
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium mb-2">API Token *</label>
-            <input
-              v-model="accountForm.apiToken"
-              type="password"
-              class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="输入您的 Cloudflare API Token"
-            />
-          </div>
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">API Token</label>
+              <input
+                v-model="accountForm.apiToken"
+                type="password"
+                class="w-full bg-foreground/5 border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                placeholder="Cloudflare API Token"
+              />
+            </div>
 
-          <div>
-            <label class="block text-sm font-medium mb-2">别名 *</label>
-            <input
-              v-model="accountForm.alias"
-              class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="为账户设置一个别名，例如：公司账户"
-            />
+            <div class="space-y-2">
+              <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">{{ t('accounts.alias') }}</label>
+              <input
+                v-model="accountForm.alias"
+                class="w-full bg-foreground/5 border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                :placeholder="t('accounts.aliasPlaceholder')"
+              />
+            </div>
           </div>
         </div>
 
-        <div class="p-6 border-t border-border flex justify-end gap-3">
-          <button class="btn-island-secondary" @click="showAddModal = false">取消</button>
-          <button class="btn-island-primary" @click="handleAddAccount">添加账户</button>
+        <div class="p-6 border-t border-border/50 flex justify-end gap-3">
+          <IslandButton variant="secondary" @click="closeModal">{{ t('common.cancel') }}</IslandButton>
+          <IslandButton @click="handleSaveAccount" :loading="saving">
+            {{ editingId ? t('common.save') : t('common.confirm') }}
+          </IslandButton>
         </div>
-      </div>
-    </div>
+      </GlassCard>
+    </n-modal>
 
-    <!-- Import Modal -->
-    <div v-if="showImportModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showImportModal = false">
-      <div class="glass-modal w-full max-w-xl" @click.stop>
-        <div class="p-6 border-b border-border">
-          <h2 class="text-xl font-semibold">导入账户</h2>
+    <n-modal v-model:show="showImportModal">
+      <GlassCard class="w-[600px] max-w-[95vw]" :padding="0">
+        <div class="p-6 border-b border-border/50 flex justify-between items-center">
+          <h2 class="text-xl font-bold">{{ t('accounts.importTitle') }}</h2>
+          <button @click="showImportModal = false" class="text-muted-foreground hover:text-foreground">
+            <component :is="CloseOutline" class="w-5 h-5" />
+          </button>
         </div>
         
-        <div class="p-6">
-          <label class="block text-sm font-medium mb-2">JSON 数据</label>
+        <div class="p-8">
+          <label class="text-xs font-bold mb-3 block text-muted-foreground uppercase tracking-widest">{{ t('accounts.backupJson') }}</label>
           <textarea
             v-model="importText"
-            class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
-            rows="10"
-            placeholder='粘贴导出的 JSON 数据'
+            class="w-full h-64 bg-slate-950 text-emerald-500 border border-border/50 rounded-2xl p-6 font-mono text-xs focus:outline-none custom-scrollbar shadow-inner"
+            :placeholder="t('accounts.importPlaceholder')"
           ></textarea>
+          <p class="mt-4 text-[10px] text-muted-foreground italic">
+            * {{ t('accounts.importNote') }}
+          </p>
         </div>
 
-        <div class="p-6 border-t border-border flex justify-end gap-3">
-          <button class="btn-island-secondary" @click="showImportModal = false">取消</button>
-          <button class="btn-island-primary" @click="handleImport">导入</button>
+        <div class="p-6 border-t border-border/50 flex justify-end gap-3">
+          <IslandButton variant="secondary" @click="showImportModal = false">{{ t('common.cancel') }}</IslandButton>
+          <IslandButton @click="handleImport">{{ t('accounts.startImport') }}</IslandButton>
         </div>
-      </div>
-    </div>
+      </GlassCard>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { CloudUploadOutline, CloudDownloadOutline, KeyOutline, FingerPrintOutline, PersonOutline } from '@vicons/ionicons5'
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { NModal } from 'naive-ui'
+import { 
+  CloudUploadOutline, 
+  CloudDownloadOutline, 
+  KeyOutline, 
+  FingerPrintOutline, 
+  PersonOutline,
+  ShieldOutline,
+  ShieldCheckmarkOutline,
+  AddOutline,
+  CopyOutline,
+  TrashOutline,
+  CheckmarkCircleOutline,
+  CloseOutline,
+  BuildOutline
+} from '@vicons/ionicons5'
 import { useAccountStore } from '@/stores/account'
 import { toast } from '@/utils/toast'
+import GlassCard from '@/components/ui/GlassCard.vue'
+import IslandButton from '@/components/ui/IslandButton.vue'
+import GlassBadge from '@/components/ui/GlassBadge.vue'
 
+const { t } = useI18n()
 const accountStore = useAccountStore()
 const showAddModal = ref(false)
+const editingId = ref<string | null>(null)
 const showImportModal = ref(false)
+const saving = ref(false)
 const importText = ref('')
+
+const showModal = computed({
+  get: () => showAddModal.value || !!editingId.value,
+  set: (val) => { if(!val) closeModal() }
+})
 
 const accountForm = ref({
   apiToken: '',
   alias: ''
 })
 
-const accountColors = ['#1d4ed8', '#7c3aed', '#059669', '#dc2626', '#ea580c']
+const accountColors = [
+  '#3b82f6', // blue
+  '#8b5cf6', // violet
+  '#10b981', // emerald
+  '#f43f5e', // rose
+  '#f59e0b', // amber
+  '#06b6d4', // cyan
+]
 
 function getAccountColor(accountId: string): string {
-  const index = accountId.charCodeAt(0) % accountColors.length
+  const index = accountId ? (accountId.charCodeAt(accountId.length - 1) % accountColors.length) : 0
   return accountColors[index]
 }
 
 function maskToken(token: string): string {
   if (!token) return ''
-  return token.substring(0, 8) + '...' + token.substring(token.length - 4)
+  return token.substring(0, 8) + ' •••• ' + token.substring(token.length - 4)
 }
 
 function switchAccount(accountId: string) {
   accountStore.switchAccount(accountId)
-  toast.success('已切换账户')
+  toast.success(t('accounts.switched'))
+}
+
+function editAccount(account: any) {
+  editingId.value = account.id
+  accountForm.value = {
+    apiToken: account.apiToken,
+    alias: account.alias
+  }
+}
+
+function closeModal() {
+  showAddModal.value = false
+  editingId.value = null
+  accountForm.value = { apiToken: '', alias: '' }
+}
+
+function copyId(id?: string) {
+  if (!id) return
+  navigator.clipboard.writeText(id)
+  toast.success(t('accounts.idCopied'))
 }
 
 async function deleteAccount(accountId: string) {
-  if (confirm('确定要删除这个账户吗？')) {
+  if (confirm(t('accounts.deleteConfirm'))) {
     accountStore.removeAccount(accountId)
-    toast.success('账户已删除')
+    toast.success(t('accounts.removed'))
   }
 }
 
-async function handleAddAccount() {
+async function handleSaveAccount() {
   if (!accountForm.value.apiToken.trim() || !accountForm.value.alias.trim()) {
-    toast.warning('请填写所有必填字段')
+    toast.warning(t('accounts.invalidInput'))
     return
   }
 
-  const account = await accountStore.addAccount({
-    apiToken: accountForm.value.apiToken,
-    alias: accountForm.value.alias
-  })
-
-  if (account) {
-    showAddModal.value = false
-    accountForm.value = { apiToken: '', alias: '' }
-    toast.success('账户添加成功')
+  saving.value = true
+  try {
+    if (editingId.value) {
+      await accountStore.updateAccount(editingId.value, {
+        apiToken: accountForm.value.apiToken,
+        alias: accountForm.value.alias
+      })
+      toast.success(t('accounts.updated'))
+    } else {
+      await accountStore.addAccount({
+        apiToken: accountForm.value.apiToken,
+        alias: accountForm.value.alias
+      })
+      toast.success(t('accounts.linked'))
+    }
+    closeModal()
+  } catch (e) {
+    toast.error(t('accounts.saveFailed'))
+  } finally {
+    saving.value = false
   }
 }
 
@@ -231,35 +348,40 @@ function exportAccounts() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `cloudflare-accounts-${Date.now()}.json`
+  a.download = `cf-manager-backup-${new Date().toISOString().split('T')[0]}.json`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
-  toast.success('账户已导出')
+  toast.success(t('accounts.exportSuccess'))
 }
 
 function handleImport() {
+  if (!importText.value.trim()) return
+
   try {
     const accounts = JSON.parse(importText.value)
     if (!Array.isArray(accounts)) {
-      toast.error('无效的JSON格式')
+      toast.error(t('accounts.importInvalid'))
       return
     }
     
     let imported = 0
     accounts.forEach(acc => {
       if (acc.apiToken && acc.alias) {
-        accountStore.addAccount(acc)
-        imported++
+        const exists = accountStore.accounts.some(existing => existing.apiToken === acc.apiToken)
+        if (!exists) {
+          accountStore.addAccount(acc)
+          imported++
+        }
       }
     })
     
     showImportModal.value = false
     importText.value = ''
-    toast.success(`成功导入 ${imported} 个账户`)
+    toast.success(t('accounts.importCount', { count: imported }))
   } catch (error) {
-    toast.error('导入失败：JSON 格式错误')
+    toast.error(t('accounts.importParseFailed'))
   }
 }
 </script>

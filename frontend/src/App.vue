@@ -29,20 +29,8 @@ onMounted(() => {
 </script>
 
 <style>
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  transition: background-color 0.3s, color 0.3s;
-}
-
+/* Base styles are now handled in styles/island-theme.css */
 #app {
   min-height: 100vh;
-}
-
-[data-theme='light'] #app {
-  color: #333;
-}
-
-[data-theme='dark'] #app {
-  color: #f5f7fa;
 }
 </style>

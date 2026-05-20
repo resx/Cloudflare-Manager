@@ -1,8 +1,8 @@
 <template>
   <div class="animate-in">
     <div class="mb-6">
-      <h1 class="text-2xl font-semibold">一键优选</h1>
-      <p class="text-sm text-muted-foreground mt-1">通过 Cloudflare 加速您的网站访问</p>
+      <h1 class="text-2xl font-semibold">{{ t('quickDeploy.title') }}</h1>
+      <p class="text-sm text-muted-foreground mt-1">{{ t('quickDeploy.subtitle') }}</p>
     </div>
 
     <!-- Mode Selector -->
@@ -13,16 +13,16 @@
       >
         <div class="flex items-center gap-3 mb-3">
           <component :is="SettingsOutline" class="w-5 h-5 text-primary" />
-          <span class="font-semibold">Worker 反代</span>
+          <span class="font-semibold">{{ t('quickDeploy.workerProxy') }}</span>
         </div>
-        <p class="text-xs text-muted-foreground mb-3">在 Cloudflare 边缘节点运行代理脚本，将请求转发到源站并缓存响应</p>
+        <p class="text-xs text-muted-foreground mb-3">{{ t('quickDeploy.workerProxyDesc') }}</p>
         <div class="text-xs space-y-1">
-          <div class="text-green-600">+ 部署简单，一键完成</div>
-          <div class="text-green-600">+ 可自定义逻辑（改写URL、加Header）</div>
-          <div class="text-green-600">+ 无需额外域名或支付方式</div>
-          <div class="text-muted-foreground">- 每次请求消耗 Worker 配额（免费10万次/天）</div>
-          <div class="text-muted-foreground">- 有 CPU 执行时间限制（免费版10ms）</div>
-          <div class="text-muted-foreground">- 无法使用优选 IP 加速</div>
+          <div class="text-green-600">{{ t('quickDeploy.workerProxyPros.pro1') }}</div>
+          <div class="text-green-600">{{ t('quickDeploy.workerProxyPros.pro2') }}</div>
+          <div class="text-green-600">{{ t('quickDeploy.workerProxyPros.pro3') }}</div>
+          <div class="text-muted-foreground">{{ t('quickDeploy.workerProxyPros.con1') }}</div>
+          <div class="text-muted-foreground">{{ t('quickDeploy.workerProxyPros.con2') }}</div>
+          <div class="text-muted-foreground">{{ t('quickDeploy.workerProxyPros.con3') }}</div>
         </div>
       </button>
       <button
@@ -31,17 +31,17 @@
       >
         <div class="flex items-center gap-3 mb-3">
           <component :is="GlobeOutline" class="w-5 h-5 text-primary" />
-          <span class="font-semibold">SaaS 优选</span>
-          <span class="glass-badge glass-badge-info text-[10px]">推荐</span>
+          <span class="font-semibold">{{ t('quickDeploy.saasOptimize') }}</span>
+          <span class="glass-badge glass-badge-info text-[10px]">{{ t('common.recommended') || '推荐' }}</span>
         </div>
-        <p class="text-xs text-muted-foreground mb-3">通过 Cloudflare for SaaS 自定义主机名，配合优选 CNAME/IP 实现最佳加速</p>
+        <p class="text-xs text-muted-foreground mb-3">{{ t('quickDeploy.saasOptimizeDesc') }}</p>
         <div class="text-xs space-y-1">
-          <div class="text-green-600">+ 走 CDN 原生缓存层，性能最优</div>
-          <div class="text-green-600">+ 不消耗 Worker 配额，无请求限制</div>
-          <div class="text-green-600">+ 支持优选 IP/CNAME，大陆访问更快</div>
-          <div class="text-green-600">+ 自动 SSL 证书签发和续期</div>
-          <div class="text-muted-foreground">- 需绑定支付方式开通（前100主机名免费）</div>
-          <div class="text-muted-foreground">- 配置步骤较多，需手动操作 Dashboard</div>
+          <div class="text-green-600">{{ t('quickDeploy.saasOptimizePros.pro1') }}</div>
+          <div class="text-green-600">{{ t('quickDeploy.saasOptimizePros.pro2') }}</div>
+          <div class="text-green-600">{{ t('quickDeploy.saasOptimizePros.pro3') }}</div>
+          <div class="text-green-600">{{ t('quickDeploy.saasOptimizePros.pro4') }}</div>
+          <div class="text-green-600">{{ t('quickDeploy.saasOptimizePros.pro5') }}</div>
+          <div class="text-muted-foreground">{{ t('quickDeploy.saasOptimizePros.con1') }}</div>
         </div>
       </button>
     </div>
@@ -50,58 +50,58 @@
     <template v-if="mode === 'worker'">
       <div class="banner-gradient rounded-lg p-5 mb-6">
         <h3 class="font-semibold mb-1 flex items-center gap-2">
-          <component :is="RocketOutline" class="w-5 h-5 text-primary" /> 三步完成部署
+          <component :is="RocketOutline" class="w-5 h-5 text-primary" /> {{ t('quickDeploy.workerSteps') }}
         </h3>
         <div class="text-sm text-muted-foreground space-y-0.5">
-          <div>1. 填写源站域名和 Worker 名称</div>
-          <div>2. 配置缓存策略（可选）</div>
-          <div>3. 点击部署，自动创建 Worker</div>
+          <div>{{ t('quickDeploy.workerStep1') }}</div>
+          <div>{{ t('quickDeploy.workerStep2') }}</div>
+          <div>{{ t('quickDeploy.workerStep3') }}</div>
         </div>
       </div>
 
       <div class="metric-card p-6 mb-6">
-        <h3 class="font-semibold mb-4">部署配置</h3>
+        <h3 class="font-semibold mb-4">{{ t('quickDeploy.deployConfig') }}</h3>
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-2">源站域名 *</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.sourceDomain') }} *</label>
             <input v-model="workerForm.sourceDomain" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="example.com" />
-            <p class="text-xs text-muted-foreground mt-1">要加速的原始网站域名</p>
+            <p class="text-xs text-muted-foreground mt-1">{{ t('quickDeploy.sourceDomainTip') }}</p>
           </div>
           <div>
-            <label class="block text-sm font-medium mb-2">Worker 名称 *</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.workerName') }} *</label>
             <input v-model="workerForm.workerName" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="cdn-accelerator" />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-2">路由模式 *</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.routePattern') }} *</label>
             <input v-model="workerForm.routePattern" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="cdn.example.com/*" />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-2">缓存时间</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.cacheTTL') }}</label>
             <select v-model="workerForm.cacheTTL" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-              <option :value="0">不缓存</option>
-              <option :value="300">5 分钟</option>
-              <option :value="3600">1 小时</option>
-              <option :value="86400">1 天</option>
-              <option :value="604800">1 周</option>
+              <option :value="0">{{ t('quickDeploy.noCache') }}</option>
+              <option :value="300">{{ t('quickDeploy.cache5m') }}</option>
+              <option :value="3600">{{ t('quickDeploy.cache1h') }}</option>
+              <option :value="86400">{{ t('quickDeploy.cache1d') }}</option>
+              <option :value="604800">{{ t('quickDeploy.cache1w') }}</option>
             </select>
           </div>
           <div class="flex gap-3 pt-4">
             <button @click="deployWorker" :disabled="deploying || !isWorkerFormValid" class="btn-island-primary flex-1">
-              <template v-if="deploying">部署中...</template>
-              <template v-else><component :is="RocketOutline" class="w-4 h-4 mr-1" /> 开始部署</template>
+              <template v-if="deploying">{{ t('quickDeploy.deploying') }}</template>
+              <template v-else><component :is="RocketOutline" class="w-4 h-4 mr-1" /> {{ t('quickDeploy.startDeploy') }}</template>
             </button>
-            <button @click="showCodePreview = true" class="btn-island-secondary">预览代码</button>
+            <button @click="showCodePreview = true" class="btn-island-secondary">{{ t('quickDeploy.previewCode') }}</button>
           </div>
         </div>
       </div>
 
       <div v-if="deployResult" class="metric-card p-6">
         <h3 class="font-semibold mb-3 flex items-center gap-2">
-          <component :is="CheckmarkCircleOutline" class="w-5 h-5 text-green-600" /> 部署成功
+          <component :is="CheckmarkCircleOutline" class="w-5 h-5 text-green-600" /> {{ t('quickDeploy.deploySuccess') }}
         </h3>
         <div class="space-y-2 text-sm">
           <div class="flex justify-between"><span class="text-muted-foreground">Worker:</span><span class="font-mono">{{ deployResult.name }}</span></div>
-          <div class="flex justify-between"><span class="text-muted-foreground">路由:</span><code class="text-xs bg-muted px-2 py-1 rounded">{{ deployResult.url }}</code></div>
+          <div class="flex justify-between"><span class="text-muted-foreground">{{ t('quickDeploy.route') }}:</span><code class="text-xs bg-muted px-2 py-1 rounded">{{ deployResult.url }}</code></div>
         </div>
       </div>
     </template>
@@ -121,23 +121,23 @@
       <!-- Step 0: Prerequisites -->
       <div v-if="saasStep === 0" class="metric-card p-6">
         <h3 class="font-semibold mb-4 flex items-center gap-2">
-          <component :is="ShieldCheckmarkOutline" class="w-5 h-5 text-primary" /> 前置准备
+          <component :is="ShieldCheckmarkOutline" class="w-5 h-5 text-primary" /> {{ t('quickDeploy.prereqTitle') }}
         </h3>
         <div class="space-y-4">
           <div class="alert-info">
-            <p class="font-medium mb-2">开通 Cloudflare for SaaS</p>
-            <p class="text-sm">需要在 Cloudflare 账户中绑定支付方式（支持信用卡/虚拟卡），以启用自定义主机名功能。每月前 100 个自定义主机名免费。</p>
+            <p class="font-medium mb-2">{{ t('quickDeploy.prereqDesc1') }}</p>
+            <p class="text-sm">{{ t('quickDeploy.prereqDesc2') }}</p>
           </div>
           <div class="text-sm space-y-2">
-            <p class="font-medium">操作步骤：</p>
+            <p class="font-medium">{{ t('quickDeploy.stepsTitle') }}</p>
             <ol class="list-decimal list-inside space-y-1 text-muted-foreground">
-              <li>登录 Cloudflare Dashboard</li>
-              <li>进入目标域名 → SSL/TLS → 自定义主机名</li>
-              <li>按提示绑定支付方式并启用功能</li>
+              <li>{{ t('quickDeploy.stepItem1') }}</li>
+              <li>{{ t('quickDeploy.stepItem2') }}</li>
+              <li>{{ t('quickDeploy.stepItem3') }}</li>
             </ol>
           </div>
           <div class="flex justify-end pt-2">
-            <button class="btn-island-primary" @click="saasStep = 1">已完成，下一步</button>
+            <button class="btn-island-primary" @click="saasStep = 1">{{ t('quickDeploy.completedNext') }}</button>
           </div>
         </div>
       </div>
@@ -145,24 +145,24 @@
       <!-- Step 1: Fallback Origin -->
       <div v-if="saasStep === 1" class="metric-card p-6">
         <h3 class="font-semibold mb-4 flex items-center gap-2">
-          <component :is="ServerOutline" class="w-5 h-5 text-primary" /> 配置回退源
+          <component :is="ServerOutline" class="w-5 h-5 text-primary" /> {{ t('quickDeploy.fallbackTitle') }}
         </h3>
         <div class="space-y-4">
-          <p class="text-sm text-muted-foreground">回退源是自定义主机名流量的目标地址。平台将自动创建 DNS 记录并设置回退源。</p>
+          <p class="text-sm text-muted-foreground">{{ t('quickDeploy.fallbackDesc') }}</p>
           <div>
-            <label class="block text-sm font-medium mb-2">回退源子域名 *</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.fallbackSubdomain') }} *</label>
             <input v-model="saasForm.fallbackDomain" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="fallback.example.com" />
-            <p class="text-xs text-muted-foreground mt-1">建议使用 fallback 或 proxy-fallback 作为子域名前缀</p>
+            <p class="text-xs text-muted-foreground mt-1">{{ t('quickDeploy.fallbackSubdomainTip') }}</p>
           </div>
           <div>
-            <label class="block text-sm font-medium mb-2">源站 IP 地址 *</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.originIP') }} *</label>
             <input v-model="saasForm.originIP" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="1.2.3.4" />
           </div>
           <div class="flex justify-between pt-2">
-            <button class="btn-island-secondary" @click="saasStep = 0">上一步</button>
+            <button class="btn-island-secondary" @click="saasStep = 0">{{ t('quickDeploy.prevStep') }}</button>
             <button class="btn-island-primary" @click="autoSetupFallback" :disabled="!saasForm.fallbackDomain || !saasForm.originIP || saasLoading">
-              <template v-if="saasLoading">配置中...</template>
-              <template v-else>自动配置回退源</template>
+              <template v-if="saasLoading">{{ t('quickDeploy.settingFallback') }}</template>
+              <template v-else>{{ t('quickDeploy.setupFallback') }}</template>
             </button>
           </div>
         </div>
@@ -171,20 +171,20 @@
       <!-- Step 2: Custom Hostname -->
       <div v-if="saasStep === 2" class="metric-card p-6">
         <h3 class="font-semibold mb-4 flex items-center gap-2">
-          <component :is="LinkOutline" class="w-5 h-5 text-primary" /> 添加自定义主机名
+          <component :is="LinkOutline" class="w-5 h-5 text-primary" /> {{ t('quickDeploy.hostnameTitle') }}
         </h3>
         <div class="space-y-4">
-          <p class="text-sm text-muted-foreground">创建自定义主机名并自动添加验证 DNS 记录，完成域名所有权验证。</p>
+          <p class="text-sm text-muted-foreground">{{ t('quickDeploy.hostnameDesc') }}</p>
           <div>
-            <label class="block text-sm font-medium mb-2">优选访问域名 *</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.customHostname') }} *</label>
             <input v-model="saasForm.customHostname" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="cdn.yourdomain.com" />
-            <p class="text-xs text-muted-foreground mt-1">用户最终通过此域名访问您的网站</p>
+            <p class="text-xs text-muted-foreground mt-1">{{ t('quickDeploy.customHostnameTip') }}</p>
           </div>
           <div class="flex justify-between pt-2">
-            <button class="btn-island-secondary" @click="saasStep = 1">上一步</button>
+            <button class="btn-island-secondary" @click="saasStep = 1">{{ t('quickDeploy.prevStep') }}</button>
             <button class="btn-island-primary" @click="autoCreateHostname" :disabled="!saasForm.customHostname || saasLoading">
-              <template v-if="saasLoading">创建中...</template>
-              <template v-else>自动创建并验证</template>
+              <template v-if="saasLoading">{{ t('quickDeploy.creatingHostname') }}</template>
+              <template v-else>{{ t('quickDeploy.createHostname') }}</template>
             </button>
           </div>
         </div>
@@ -193,33 +193,33 @@
       <!-- Step 3: DNS Optimization -->
       <div v-if="saasStep === 3" class="metric-card p-6">
         <h3 class="font-semibold mb-4 flex items-center gap-2">
-          <component :is="GlobeOutline" class="w-5 h-5 text-primary" /> DNS 优选配置
+          <component :is="GlobeOutline" class="w-5 h-5 text-primary" /> {{ t('quickDeploy.dnsOptTitle') }}
         </h3>
         <div class="space-y-4">
-          <p class="text-sm text-muted-foreground">将访问域名指向优选节点，平台将自动创建对应的 DNS 记录。</p>
+          <p class="text-sm text-muted-foreground">{{ t('quickDeploy.dnsOptDesc') }}</p>
           <div>
-            <label class="block text-sm font-medium mb-2">优选方式</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.optType') }}</label>
             <select v-model="saasForm.optimizeType" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
-              <option value="cname">CNAME 优选域名（推荐）</option>
-              <option value="ip">自定义优选 IP</option>
+              <option value="cname">{{ t('quickDeploy.optCname') }}</option>
+              <option value="ip">{{ t('quickDeploy.optIP') }}</option>
             </select>
           </div>
           <div v-if="saasForm.optimizeType === 'cname'">
-            <label class="block text-sm font-medium mb-2">选择优选域名</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.selectOptCname') }}</label>
             <select v-model="saasForm.optimizeCname" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
               <option v-for="item in cnamePresets" :key="item.value" :value="item.value">{{ item.label }}</option>
             </select>
-            <input v-if="saasForm.optimizeCname === 'custom'" v-model="saasForm.customCname" class="w-full mt-2 px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="输入自定义优选域名" />
+            <input v-if="saasForm.optimizeCname === 'custom'" v-model="saasForm.customCname" class="w-full mt-2 px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" :placeholder="t('quickDeploy.customCnamePlaceholder')" />
           </div>
           <div v-else>
-            <label class="block text-sm font-medium mb-2">优选 IP 地址</label>
+            <label class="block text-sm font-medium mb-2">{{ t('quickDeploy.optIPAddress') }}</label>
             <input v-model="saasForm.optimizeIP" class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="104.16.x.x" />
           </div>
           <div class="flex justify-between pt-2">
-            <button class="btn-island-secondary" @click="saasStep = 2">上一步</button>
+            <button class="btn-island-secondary" @click="saasStep = 2">{{ t('quickDeploy.prevStep') }}</button>
             <button class="btn-island-primary" @click="autoCreateOptimizeDns" :disabled="saasLoading">
-              <template v-if="saasLoading">配置中...</template>
-              <template v-else>自动配置优选 DNS</template>
+              <template v-if="saasLoading">{{ t('quickDeploy.deploying') }}</template>
+              <template v-else>{{ t('quickDeploy.configureDns') }}</template>
             </button>
           </div>
         </div>
@@ -228,33 +228,33 @@
       <!-- Step 4: Complete -->
       <div v-if="saasStep === 4" class="metric-card p-6">
         <h3 class="font-semibold mb-4 flex items-center gap-2">
-          <component :is="CheckmarkCircleOutline" class="w-5 h-5 text-green-600" /> 配置完成
+          <component :is="CheckmarkCircleOutline" class="w-5 h-5 text-green-600" /> {{ t('quickDeploy.configComplete') }}
         </h3>
         <div class="space-y-4">
           <div class="space-y-3 text-sm">
             <div class="flex justify-between py-2 border-b border-border">
-              <span class="text-muted-foreground">回退源</span>
+              <span class="text-muted-foreground">{{ t('quickDeploy.fallbackOrigin') }}</span>
               <span class="font-mono">{{ saasForm.fallbackDomain }}</span>
             </div>
             <div class="flex justify-between py-2 border-b border-border">
-              <span class="text-muted-foreground">源站 IP</span>
+              <span class="text-muted-foreground">{{ t('quickDeploy.originIP') }}</span>
               <span class="font-mono">{{ saasForm.originIP }}</span>
             </div>
             <div class="flex justify-between py-2 border-b border-border">
-              <span class="text-muted-foreground">访问域名</span>
+              <span class="text-muted-foreground">{{ t('quickDeploy.accessDomain') }}</span>
               <span class="font-mono">{{ saasForm.customHostname }}</span>
             </div>
             <div class="flex justify-between py-2">
-              <span class="text-muted-foreground">优选指向</span>
+              <span class="text-muted-foreground">{{ t('quickDeploy.optTarget') }}</span>
               <span class="font-mono">{{ saasForm.optimizeType === 'cname' ? resolvedCname : saasForm.optimizeIP }}</span>
             </div>
           </div>
           <div class="alert-info text-sm">
-            <p class="font-medium mb-1">证书自动续期（推荐）：</p>
-            <p>将 <code class="bg-muted px-1 rounded">_acme-challenge.{{ saasForm.customHostname }}</code> 设置为 CNAME 记录，指向 Cloudflare 提供的 DCV 委派域名，即可实现证书自动续期。</p>
+            <p class="font-medium mb-1">{{ t('quickDeploy.autoRenewTitle') }}</p>
+            <p>{{ t('quickDeploy.autoRenewDesc', { domain: saasForm.customHostname }) }}</p>
           </div>
           <div class="flex justify-between pt-2">
-            <button class="btn-island-secondary" @click="saasStep = 0">重新配置</button>
+            <button class="btn-island-secondary" @click="saasStep = 0">{{ t('quickDeploy.reconfigure') }}</button>
           </div>
         </div>
       </div>
@@ -264,7 +264,7 @@
     <div v-if="showCodePreview" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showCodePreview = false">
       <div class="glass-modal w-full max-w-3xl max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="p-6 border-b border-border flex justify-between items-center">
-          <h2 class="text-xl font-semibold">Worker 代码预览</h2>
+          <h2 class="text-xl font-semibold">{{ t('quickDeploy.previewTitle') }}</h2>
           <button @click="showCodePreview = false" class="text-muted-foreground hover:text-foreground">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -275,8 +275,8 @@
           <pre class="bg-muted p-4 rounded-lg text-xs overflow-x-auto"><code>{{ generatedCode }}</code></pre>
         </div>
         <div class="p-6 border-t border-border flex justify-end gap-3">
-          <button class="btn-island-secondary" @click="copyText(generatedCode)">复制代码</button>
-          <button class="btn-island-primary" @click="showCodePreview = false">关闭</button>
+          <button class="btn-island-secondary" @click="copyText(generatedCode)">{{ t('quickDeploy.copyCode') }}</button>
+          <button class="btn-island-primary" @click="showCodePreview = false">{{ t('quickDeploy.close') }}</button>
         </div>
       </div>
     </div>
@@ -285,6 +285,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   RocketOutline,
   CheckmarkCircleOutline,
@@ -298,6 +299,7 @@ import { cloudflareApi } from '@/api'
 import { toast } from '@/utils/toast'
 import { logHistory } from '@/utils/history'
 
+const { t } = useI18n()
 const mode = ref<'worker' | 'saas'>('saas')
 const deploying = ref(false)
 const showCodePreview = ref(false)
@@ -313,7 +315,13 @@ const workerForm = ref({
 
 // SaaS form
 const saasStep = ref(0)
-const saasSteps = ['前置准备', '配置回退源', '自定义主机名', 'DNS 优选', '完成']
+const saasSteps = computed(() => [
+  t('quickDeploy.saasSteps.step0'),
+  t('quickDeploy.saasSteps.step1'),
+  t('quickDeploy.saasSteps.step2'),
+  t('quickDeploy.saasSteps.step3'),
+  t('quickDeploy.saasSteps.step4')
+])
 const saasLoading = ref(false)
 const saasForm = ref({
   fallbackDomain: '',
@@ -326,12 +334,12 @@ const saasForm = ref({
   hostnameResult: null as any,
 })
 
-const cnamePresets = [
+const cnamePresets = computed(() => [
   { label: 'cdn.anycast.eu.org (全球)', value: 'cdn.anycast.eu.org' },
   { label: 'cdn-all.xn--b6gac.eu.org (全球)', value: 'cdn-all.xn--b6gac.eu.org' },
   { label: 'cloudflare.182682.xyz (亚洲优化)', value: 'cloudflare.182682.xyz' },
-  { label: '自定义域名', value: 'custom' },
-]
+  { label: t('quickDeploy.customDomain') || '自定义域名', value: 'custom' },
+])
 
 const resolvedCname = computed(() => {
   if (saasForm.value.optimizeCname === 'custom') return saasForm.value.customCname
@@ -376,7 +384,7 @@ async function handleRequest(request) {
 function copyText(text: string) {
   if (!text) return
   navigator.clipboard.writeText(text)
-  toast.success('已复制到剪贴板')
+  toast.success(t('quickDeploy.clipboardCopied'))
 }
 
 async function findZoneForDomain(domain: string) {
@@ -395,7 +403,7 @@ async function autoSetupFallback() {
   try {
     const zone = await findZoneForDomain(saasForm.value.fallbackDomain)
     if (!zone) {
-      toast.error('未找到对应域名，请确认域名已添加到 Cloudflare')
+      toast.error(t('quickDeploy.zoneNotFound'))
       return
     }
     // 1. 创建 A 记录指向源站（开启代理）
@@ -408,10 +416,10 @@ async function autoSetupFallback() {
     })
     // 2. 设置为回退源
     await cloudflareApi.setFallbackOrigin(zone.id, saasForm.value.fallbackDomain)
-    toast.success('回退源配置完成')
+    toast.success(t('quickDeploy.fallbackSuccess'))
     saasStep.value = 2
   } catch (error: any) {
-    toast.error(error.message || '配置回退源失败')
+    toast.error(error.message || t('quickDeploy.fallbackFailed'))
   } finally {
     saasLoading.value = false
   }
@@ -422,7 +430,7 @@ async function autoCreateHostname() {
   try {
     const zone = await findZoneForDomain(saasForm.value.fallbackDomain)
     if (!zone) {
-      toast.error('未找到对应域名')
+      toast.error(t('quickDeploy.domainNotFound'))
       return
     }
     // 1. 创建自定义主机名
@@ -454,13 +462,13 @@ async function autoCreateHostname() {
           })
         }
       }
-      toast.success('自定义主机名创建成功，验证记录已自动添加')
+      toast.success(t('quickDeploy.hostnameSuccessVerification'))
     } else {
-      toast.success('自定义主机名创建成功')
+      toast.success(t('quickDeploy.hostnameSuccess'))
     }
     saasStep.value = 3
   } catch (error: any) {
-    toast.error(error.message || '创建自定义主机名失败')
+    toast.error(error.message || t('quickDeploy.hostnameFailed'))
   } finally {
     saasLoading.value = false
   }
@@ -471,7 +479,7 @@ async function autoCreateOptimizeDns() {
   try {
     const zone = await findZoneForDomain(saasForm.value.customHostname)
     if (!zone) {
-      toast.error('未找到访问域名对应的 Zone，请确认域名已添加到 Cloudflare')
+      toast.error(t('quickDeploy.zoneNotFoundAccess'))
       return
     }
 
@@ -492,10 +500,10 @@ async function autoCreateOptimizeDns() {
         proxied: false,
       })
     }
-    toast.success('优选 DNS 记录创建成功')
+    toast.success(t('quickDeploy.dnsSuccess'))
     saasStep.value = 4
   } catch (error: any) {
-    toast.error(error.message || '创建优选 DNS 记录失败')
+    toast.error(error.message || t('quickDeploy.dnsFailed'))
   } finally {
     saasLoading.value = false
   }
@@ -516,10 +524,10 @@ async function deployWorker() {
       }
     }
     deployResult.value = { name: workerForm.value.workerName, url: workerForm.value.routePattern }
-    logHistory.worker('一键优选部署', `Worker: ${workerForm.value.workerName}`)
-    toast.success('Worker 部署成功')
+    logHistory.worker(t('quickDeploy.workerDeployTitle'), `Worker: ${workerForm.value.workerName}`)
+    toast.success(t('quickDeploy.workerDeploySuccess'))
   } catch (error: any) {
-    toast.error(error.message || '部署失败')
+    toast.error(error.message || t('quickDeploy.deployFailed'))
   } finally {
     deploying.value = false
   }

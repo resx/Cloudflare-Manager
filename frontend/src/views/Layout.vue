@@ -1,112 +1,146 @@
 <template>
-  <!-- Floating Island Layout -->
-  <div class="flex h-screen p-4 gap-4">
-    
-    <!-- Sidebar - Floating Island -->
+  <div class="flex h-screen p-4 gap-4 overflow-hidden bg-background">
+    <!-- Sidebar -->
     <aside
-      :class="['glass-sidebar transition-all duration-300 flex flex-col rounded-2xl', collapsed ? 'w-16' : 'w-60']"
-      style="padding: 20px 10px;"
+      :class="['glass-sidebar transition-all duration-500 ease-in-out flex flex-col z-20', collapsed ? 'w-20' : 'w-64']"
+      style="padding: 24px 12px;"
     >
-      <!-- Logo -->
-      <div class="px-3 pb-5">
-        <div v-if="!collapsed" class="font-bold text-lg text-foreground flex items-center gap-2">
-          <component :is="CloudOutline" class="w-5 h-5 text-primary" />
-          <span>CF Manager</span>
+      <!-- Logo Area -->
+      <div :class="['pb-8 flex items-center min-h-[40px]', collapsed ? 'justify-center' : 'px-2']">
+        <div v-if="!collapsed" class="flex items-center gap-3 overflow-hidden animate-in">
+          <div class="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0 shadow-inner">
+            <component :is="CloudOutline" class="w-6 h-6" />
+          </div>
+          <div class="flex flex-col">
+            <span class="font-black text-lg tracking-tighter text-foreground leading-none">CF ISLAND</span>
+            <span class="text-[10px] font-bold text-muted-foreground/60 tracking-widest uppercase">Management</span>
+          </div>
         </div>
-        <div v-else class="flex justify-center">
-          <component :is="CloudOutline" class="w-6 h-6 text-primary" />
+        <div v-else class="flex justify-center animate-in">
+          <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg border border-primary/20 cursor-pointer hover:bg-primary/20 transition-all group" @click="collapsed = false" :title="t('layout.expandSidebar')">
+            <component :is="CloudOutline" class="w-7 h-7 group-hover:scale-110 transition-transform" />
+          </div>
         </div>
       </div>
 
       <!-- Navigation -->
-      <nav class="flex-1 overflow-y-auto">
+      <nav class="flex-1 overflow-y-auto px-1 custom-scrollbar space-y-8">
         <!-- Main Menu Section -->
-        <div class="mb-4">
-          <div v-if="!collapsed" class="section-title">主菜单</div>
+        <section class="space-y-1">
+          <div v-if="!collapsed" class="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{{ t('layout.console') }}</div>
           <a
             v-for="item in mainMenuItems"
             :key="item.path"
             @click.prevent="router.push(item.path)"
-            :class="['nav-item', { 'active': route.path === item.path, 'justify-center': collapsed }]"
+            :class="['nav-item group relative', { 'active': route.path === item.path, 'justify-center !px-0': collapsed }]"
             @mouseenter="showTooltip($event, item.label)"
             @mouseleave="hideTooltip"
           >
-            <component :is="item.icon" class="w-[18px] h-[18px] flex-shrink-0" :class="{ 'mr-3': !collapsed }" />
-            <span v-if="!collapsed">{{ item.label }}</span>
+            <component :is="item.icon" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" :class="{ 'mr-3': !collapsed }" />
+            <span v-if="!collapsed" class="truncate font-bold tracking-tight text-sm">{{ item.label }}</span>
+            <div v-if="collapsed && route.path === item.path" class="absolute -right-1 w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary-rgb),0.8)]"></div>
           </a>
-        </div>
+        </section>
 
         <!-- Zone Menu Section -->
-        <div v-if="zones.length > 0" class="relative">
-          <!-- Domain Selector Dropdown -->
-          <div v-if="!collapsed" class="section-title flex items-center justify-between">
-            <span class="truncate flex-1 max-w-[150px]" :title="currentZone?.name">{{ currentZone?.name || '选择域名' }}</span>
-            <!-- Multi-zone dropdown -->
-            <div v-if="zones.length > 1" class="relative">
-              <button
-                ref="dropdownButton"
-                @click="toggleZoneDropdown"
-                class="text-primary hover:text-primary/80 transition-colors p-1 rounded hover:bg-muted"
-              >
-                <component :is="ChevronDownOutline" class="w-4 h-4" />
-              </button>
+        <section v-if="zones.length > 0" class="space-y-1">
+          <div v-if="!collapsed" class="px-3 mb-2 flex items-center justify-between group/title">
+            <span class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{{ t('layout.zoneSettings') }}</span>
+            <button
+              v-if="zones.length > 1"
+              ref="dropdownButton"
+              @click="toggleZoneDropdown"
+              class="text-primary/40 hover:text-primary transition-all p-1"
+            >
+              <component :is="ChevronDownOutline" class="w-3 h-3" />
+            </button>
+          </div>
+
+          <!-- Selected Zone Card (In Sidebar) -->
+          <div v-if="!collapsed" class="px-2 mb-4">
+            <div class="p-3 rounded-2xl bg-foreground/5 border border-border/40 flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
+                <component :is="GlobeOutline" class="w-4 h-4" />
+              </div>
+              <div class="min-w-0">
+                <p class="text-xs font-black truncate text-foreground">{{ currentZone?.name || t('zones.notSelected') }}</p>
+                <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Active Zone</p>
+              </div>
             </div>
           </div>
 
-          <!-- Zone menu items -->
           <a
             v-for="item in zoneMenuItems"
             :key="item.path"
             @click.prevent="router.push(item.path)"
-            :class="['nav-item', { 'active': route.path === item.path, 'justify-center': collapsed }]"
+            :class="['nav-item group relative', { 'active': route.path === item.path, 'justify-center !px-0': collapsed }]"
             @mouseenter="showTooltip($event, item.label)"
             @mouseleave="hideTooltip"
           >
-            <component :is="item.icon" class="w-[18px] h-[18px] flex-shrink-0" :class="{ 'mr-3': !collapsed }" />
-            <span v-if="!collapsed" class="flex-1">{{ item.label }}</span>
-            <span v-if="!collapsed && item.pro" class="glass-badge glass-badge-warning text-[10px]">Pro+</span>
+            <component :is="item.icon" class="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" :class="{ 'mr-3': !collapsed }" />
+            <span v-if="!collapsed" class="truncate font-bold tracking-tight text-sm">{{ item.label }}</span>
+            <div v-if="!collapsed && item.pro" class="ml-auto">
+              <div class="px-1.5 py-0.5 bg-amber-500/10 text-amber-600 rounded-md text-[8px] font-black tracking-widest">PRO</div>
+            </div>
           </a>
-        </div>
+        </section>
       </nav>
 
-      <!-- Collapse Button -->
-      <div class="mt-auto pt-3 px-3">
-        <button @click="collapsed = !collapsed" class="w-full text-sm text-muted-foreground hover:text-foreground flex items-center justify-center">
-          <component :is="collapsed ? ChevronForwardOutline : ChevronBackOutline" class="w-4 h-4" />
-          <span v-if="!collapsed" class="ml-2">收起侧栏</span>
+      <!-- Bottom Actions -->
+      <div class="pt-4 border-t border-border/30 px-2 space-y-2">
+        <button 
+          @click="toggleTheme" 
+          class="w-full h-10 rounded-xl hover:bg-foreground/5 text-muted-foreground flex items-center gap-3 transition-all px-3"
+          :class="{ 'justify-center !px-0': collapsed }"
+          :title="t('layout.toggleTheme')"
+        >
+          <component :is="themeStore.isDark ? MoonOutline : SunnyOutline" class="w-5 h-5" />
+          <span v-if="!collapsed" class="text-xs font-bold">{{ themeStore.isDark ? t('layout.darkMode') : t('layout.lightMode') }}</span>
+        </button>
+
+        <button 
+          @click="collapsed = !collapsed" 
+          class="w-full h-10 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary flex items-center gap-3 transition-all px-3 shadow-inner border border-primary/5"
+          :class="{ 'justify-center !px-0': collapsed }"
+          :title="collapsed ? t('layout.expandSidebar') : t('layout.collapseSidebar')"
+        >
+          <component :is="collapsed ? ChevronForwardOutline : ChevronBackOutline" class="w-5 h-5" />
+          <span v-if="!collapsed" class="text-xs font-black uppercase tracking-widest">{{ t('layout.collapseMenu') }}</span>
         </button>
       </div>
     </aside>
 
-    <!-- Floating Zone Dropdown (Teleport to body) -->
+    <!-- Zone Dropdown Overlay -->
     <Teleport to="body">
-      <div v-if="showZoneDropdown" class="fixed inset-0 z-[9998]" @click="showZoneDropdown = false"></div>
+      <div v-if="showZoneDropdown" class="fixed inset-0 z-[9998] bg-background/20 backdrop-blur-sm" @click="showZoneDropdown = false"></div>
       <div 
         v-if="showZoneDropdown"
         :style="{ left: dropdownPosition.x + 'px', top: dropdownPosition.y + 'px' }"
-        class="fixed z-[9999] glass-modal min-w-[280px] max-h-[420px] overflow-hidden"
+        class="fixed z-[9999] glass-modal min-w-[320px] max-h-[420px] overflow-hidden animate-in shadow-2xl border border-primary/20"
         @click.stop
       >
-        <div class="py-2 overflow-y-auto max-h-[420px]">
-          <div class="px-4 py-2 text-xs font-semibold text-muted-foreground border-b border-border">
-            选择域名 ({{ zones.length }})
+        <div class="py-2 overflow-y-auto max-h-[420px] custom-scrollbar">
+          <div class="px-6 py-4 border-b border-border/50 bg-foreground/[0.02]">
+            <h4 class="text-sm font-black text-foreground uppercase tracking-widest">{{ t('layout.selectZone') }}</h4>
+            <p class="text-[10px] text-muted-foreground font-bold mt-0.5">{{ t('layout.zoneCount', { count: zones.length }) }}</p>
           </div>
           <button
             v-for="zone in zones"
             :key="zone.id"
             @click="selectZone(zone.id)"
             :class="[
-              'w-full text-left px-4 py-3 text-sm hover:bg-muted transition-all flex items-center justify-between',
-              currentZone?.id === zone.id ? 'bg-accent/50 text-accent-foreground font-medium' : 'text-foreground'
+              'w-full text-left px-6 py-4 text-sm hover:bg-primary/5 transition-all flex items-center justify-between group',
+              currentZone?.id === zone.id ? 'bg-primary/10 text-primary font-bold' : 'text-foreground'
             ]"
           >
             <div class="flex-1 min-w-0">
-              <div class="truncate font-medium">{{ zone.name }}</div>
-              <div class="text-xs text-muted-foreground truncate mt-0.5">{{ zone.status }}</div>
+              <div class="truncate font-bold flex items-center gap-2">
+                {{ zone.name }}
+                <div v-if="zone.status === 'active'" class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"></div>
+              </div>
+              <div class="text-[10px] text-muted-foreground font-bold mt-1 uppercase tracking-tight">{{ zone.status }}</div>
             </div>
-            <svg v-if="currentZone?.id === zone.id" class="w-5 h-5 ml-3 flex-shrink-0 text-primary" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-            </svg>
+            <component :is="CheckmarkOutline" v-if="currentZone?.id === zone.id" class="w-5 h-5 ml-4 flex-shrink-0 text-primary" />
           </button>
         </div>
       </div>
@@ -114,98 +148,232 @@
 
     <!-- Sidebar Tooltip -->
     <Teleport to="body">
-      <div
-        v-if="tooltip.visible"
-        class="nav-tooltip"
+      <div 
+        v-if="tooltip.visible" 
+        class="nav-tooltip flex items-center gap-2" 
+        :class="{ 'sidebar-tip': tooltip.isSidebar, 'topbar-tip': !tooltip.isSidebar }"
         :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
       >
+        <div class="w-1 h-1 rounded-full bg-primary"></div>
         {{ tooltip.text }}
       </div>
     </Teleport>
 
     <!-- Main Content Area -->
-    <main class="flex-1 flex flex-col gap-4 min-w-0">
-      <!-- Floating Topbar -->
-      <div class="glass-topbar flex justify-between items-center">
-        <div class="text-sm text-muted-foreground">你的工作 / {{ currentTitle }}</div>
-        <div class="flex items-center gap-3">
-          <!-- Theme Toggle -->
-          <button
-            @click="toggleTheme"
-            class="w-9 h-9 rounded-lg hover:bg-white/30 flex items-center justify-center transition-colors"
-          >
-            <component :is="themeStore.isDark ? MoonOutline : SunnyOutline" class="w-[18px] h-[18px]" />
-          </button>
-
-          <!-- User Avatar -->
-          <div v-if="accountStore.currentAccount" class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
-            {{ (accountStore.currentAccount.alias || 'U')[0].toUpperCase() }}
+    <main class="flex-1 flex flex-col gap-4 min-w-0 overflow-hidden">
+      <!-- Topbar -->
+      <header class="glass-topbar flex justify-between items-center h-20 shrink-0 px-8">
+        <div class="flex items-center gap-8">
+          <div class="flex flex-col">
+            <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+              <span>{{ t('layout.controlPanel') }}</span>
+              <span class="opacity-30">/</span>
+              <span class="text-primary">{{ currentTitle }}</span>
+            </div>
+            <h2 class="text-lg font-bold text-foreground tracking-tight">{{ currentTitle }}</h2>
           </div>
 
-          <!-- Add Account -->
-          <button
+          <!-- New Search Entry Point -->
+          <div 
+            @click="triggerSearch"
+            class="hidden lg:flex items-center gap-3 px-4 py-2 bg-foreground/5 border border-border/40 rounded-2xl cursor-pointer hover:bg-foreground/10 hover:border-primary/30 transition-all group w-64"
+          >
+            <component :is="SearchOutline" class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            <span class="text-xs font-bold text-muted-foreground/60 flex-1">{{ t('common.search') }}</span>
+            <kbd class="px-1.5 py-0.5 bg-foreground/10 border border-border/50 rounded-md text-[9px] font-black text-muted-foreground group-hover:text-primary transition-colors">⌘K</kbd>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <!-- Language Toggle -->
+          <button 
+            @click="toggleLanguage" 
+            class="w-12 h-12 rounded-2xl flex items-center justify-center transition-all border border-border/50 bg-foreground/5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground group"
+            @mouseenter="showTooltip($event, t('layout.switchLang'), true)"
+            @mouseleave="hideTooltip"
+          >
+            <component :is="LanguageOutline" class="w-5 h-5" />
+          </button>
+
+          <!-- Demo Mode Active Badge -->
+          <transition name="page-fade">
+            <div v-if="themeStore.isDemoMode" class="hidden xl:flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-600 animate-pulse">
+              <div class="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+              <span class="text-[9px] font-black uppercase tracking-widest">{{ t('demoMode.active') }}</span>
+            </div>
+          </transition>
+
+          <div v-if="accountStore.currentAccount" class="hidden md:flex flex-col items-end mr-2">
+            <span class="text-xs font-black text-foreground">{{ accountStore.currentAccount.alias }}</span>
+            <span :class="['text-[10px] font-bold text-muted-foreground uppercase tracking-tight italic opacity-60 transition-all', themeStore.isDemoMode ? 'demo-mask' : '']">
+              {{ accountStore.currentAccount.accountId }}
+            </span>
+          </div>
+
+          <!-- Demo Mode Toggle -->
+          <button 
+            @click="toggleDemoMode" 
+            class="w-12 h-12 rounded-2xl flex items-center justify-center transition-all border border-border/50 group relative"
+            :class="themeStore.isDemoMode ? 'bg-amber-500 text-white border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.4)]' : 'bg-foreground/5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground'"
+            @mouseenter="showTooltip($event, themeStore.isDemoMode ? t('demoMode.exit') : t('demoMode.enter'), true)"
+            @mouseleave="hideTooltip"
+          >
+            <component :is="themeStore.isDemoMode ? EyeOffOutline : EyeOutline" class="w-5 h-5" />
+          </button>
+
+          <n-dropdown 
+            v-if="accountStore.currentAccount" 
+            :options="accountOptions" 
+            @select="handleAccountMenuSelect"
+            trigger="click"
+            placement="bottom-end"
+          >
+            <div class="w-12 h-12 rounded-2xl bg-foreground/5 text-foreground flex items-center justify-center text-lg font-black border border-border/50 cursor-pointer hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all active:scale-95 group relative">
+              {{ (accountStore.currentAccount.alias || 'U')[0].toUpperCase() }}
+              <div class="absolute -right-1 -bottom-1 w-4 h-4 bg-emerald-500 border-2 border-background rounded-full"></div>
+            </div>
+          </n-dropdown>
+
+          <IslandButton
             v-else
-            class="btn-island-primary"
+            size="small"
             @click="showAccountModal = true"
           >
-            添加账户
-          </button>
+            {{ t('accounts.addAccount') }}
+          </IslandButton>
         </div>
-      </div>
+      </header>
 
-      <!-- The Island Container (content only) -->
-      <div class="island-container flex-1 overflow-y-auto" style="padding: 32px 40px;">
-        <router-view />
+      <!-- Main Container -->
+      <div class="flex-1 overflow-hidden">
+        <GlassCard class="h-full flex flex-col border-border/40 !bg-card !backdrop-blur-[20px]" :padding="0">
+          <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <router-view v-slot="{ Component }">
+              <transition name="page-fade" mode="out-in">
+                <component :is="Component" />
+              </transition>
+            </router-view>
+          </div>
+        </GlassCard>
       </div>
     </main>
 
+    <CommandPalette />
+    <SmartIsland />
+
     <!-- Add Account Modal -->
-    <div v-if="showAccountModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showAccountModal = false">
-      <div class="glass-modal w-full max-w-xl" @click.stop style="max-height: 90vh; overflow-y: auto;">
-        <div class="p-6 border-b border-border">
-          <h2 class="text-xl font-semibold">添加 Cloudflare 账户</h2>
-        </div>
-        
-        <div class="p-6 space-y-4">
-          <div class="alert-warning">
-            <strong>安全提示：</strong>请使用 API Token 而不是 Global API Key
+    <Teleport to="body">
+      <div v-if="showAccountModal" class="fixed inset-0 bg-background/60 backdrop-blur-xl flex items-center justify-center z-[10000] p-4" @click.self="showAccountModal = false">
+        <GlassCard class="w-full max-w-lg shadow-2xl animate-in border-primary/20" :padding="0">
+          <div class="p-8 border-b border-border/50 flex justify-between items-center bg-foreground/[0.02]">
+            <div>
+              <h2 class="text-2xl font-black tracking-tighter">{{ t('layout.connectCloudflare') }}</h2>
+              <p class="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-1">{{ t('layout.addCredentials') }}</p>
+            </div>
+            <button @click="showAccountModal = false" class="w-10 h-10 rounded-2xl bg-foreground/5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all">
+              <component :is="ChevronDownOutline" class="w-5 h-5 rotate-45" />
+            </button>
+          </div>
+          
+          <div class="p-10 space-y-8">
+            <div class="p-5 bg-primary/5 border border-primary/10 rounded-2xl flex gap-4 items-start">
+              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <component :is="ShieldOutline" class="w-5 h-5" />
+              </div>
+              <div class="space-y-1">
+                <p class="text-sm font-bold text-foreground">{{ t('accounts.privacyTitle') }}</p>
+                <p class="text-xs text-muted-foreground leading-relaxed">
+                  {{ t('layout.privacyExplain') }}
+                </p>
+              </div>
+            </div>
+
+            <div class="space-y-6">
+              <div class="space-y-3">
+                <div class="flex justify-between items-center px-1">
+                  <label class="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Cloudflare API Token</label>
+                  <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" class="text-[10px] text-primary font-black uppercase tracking-widest hover:underline flex items-center gap-1">
+                    {{ t('layout.getToken') }}
+                    <component :is="RocketOutline" class="w-3 h-3" />
+                  </a>
+                </div>
+                <input
+                  v-model="accountForm.apiToken"
+                  type="password"
+                  class="w-full bg-foreground/5 border border-border/50 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all font-mono"
+                  :placeholder="t('layout.tokenPlaceholder')"
+                />
+              </div>
+
+              <!-- Permission Guide -->
+              <div class="p-6 bg-foreground/[0.03] border border-border/40 rounded-[24px] space-y-4">
+                <p class="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] flex items-center gap-2">
+                  <component :is="CheckmarkOutline" class="w-3 h-3 text-emerald-500" />
+                  {{ t('layout.recommendedPermissions') }}
+                </p>
+                <div class="grid grid-cols-2 gap-y-3 gap-x-6">
+                  <div class="flex items-center gap-2 text-[11px] font-bold text-foreground/80">
+                    <div class="w-1 h-1 rounded-full bg-primary/40"></div>
+                    Account: Settings (R)
+                  </div>
+                  <div class="flex items-center gap-2 text-[11px] font-bold text-foreground/80">
+                    <div class="w-1 h-1 rounded-full bg-primary/40"></div>
+                    Zone: Zone (R/W)
+                  </div>
+                  <div class="flex items-center gap-2 text-[11px] font-bold text-foreground/80">
+                    <div class="w-1 h-1 rounded-full bg-primary/40"></div>
+                    Zone: DNS (R/W)
+                  </div>
+                  <div class="flex items-center gap-2 text-[11px] font-bold text-foreground/80">
+                    <div class="w-1 h-1 rounded-full bg-primary/40"></div>
+                    Zone: Analytics (R)
+                  </div>
+                  <div class="flex items-center gap-2 text-[11px] font-bold text-foreground/80">
+                    <div class="w-1 h-1 rounded-full bg-primary/40"></div>
+                    Worker: Scripts (R/W)
+                  </div>
+                  <div class="flex items-center gap-2 text-[11px] font-bold text-foreground/80">
+                    <div class="w-1 h-1 rounded-full bg-primary/40"></div>
+                    User: Details (R)
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">{{ t('accounts.alias') }}</label>
+                <input
+                  v-model="accountForm.alias"
+                  class="w-full bg-foreground/5 border border-border/50 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all font-bold"
+                  :placeholder="t('accounts.aliasPlaceholder')"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium mb-2">API Token *</label>
-            <input
-              v-model="accountForm.apiToken"
-              type="password"
-              class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="输入您的 Cloudflare API Token"
-            />
+          <div class="p-8 border-t border-border/50 flex justify-end gap-4 bg-foreground/[0.01]">
+            <IslandButton variant="secondary" @click="showAccountModal = false" class="px-8">{{ t('common.cancel') }}</IslandButton>
+            <IslandButton @click="handleAddAccount" class="px-10 shadow-lg shadow-primary/20">{{ t('layout.verifyAndAdd') }}</IslandButton>
           </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-2">别名（可选）</label>
-            <input
-              v-model="accountForm.alias"
-              class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="为账户设置一个别名"
-            />
-          </div>
-        </div>
-
-        <div class="p-6 border-t border-border flex justify-end gap-3">
-          <button class="btn-island-secondary" @click="showAccountModal = false">取消</button>
-          <button class="btn-island-primary" @click="handleAddAccount">添加账户</button>
-        </div>
+        </GlassCard>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, provide, type Component } from 'vue'
+import { ref, computed, onMounted, watch, provide, h, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAccountStore } from '@/stores/account'
 import { useThemeStore } from '@/stores/theme'
 import { cloudflareApi, type Zone } from '@/api'
+import { toast } from '@/utils/toast'
+import GlassCard from '@/components/ui/GlassCard.vue'
+import IslandButton from '@/components/ui/IslandButton.vue'
+import GlassBadge from '@/components/ui/GlassBadge.vue'
+import CommandPalette from '@/components/ui/CommandPalette.vue'
+import SmartIsland from '@/components/ui/SmartIsland.vue'
+import { NDropdown } from 'naive-ui'
 import {
   HomeOutline,
   GlobeOutline,
@@ -231,10 +399,17 @@ import {
   ChevronBackOutline,
   ChevronForwardOutline,
   ChevronDownOutline,
+  SwapHorizontalOutline,
+  CheckmarkOutline,
+  EyeOutline,
+  EyeOffOutline,
+  SearchOutline,
+  LanguageOutline
 } from '@vicons/ionicons5'
 
 const router = useRouter()
 const route = useRoute()
+const { t, locale } = useI18n()
 const accountStore = useAccountStore()
 const themeStore = useThemeStore()
 
@@ -247,16 +422,32 @@ const zones = ref<Zone[]>([])
 const currentZone = ref<Zone | null>(null)
 
 // Tooltip state
-const tooltip = ref({ visible: false, text: '', x: 0, y: 0 })
+const tooltip = ref({ visible: false, text: '', x: 0, y: 0, isSidebar: true })
 
-function showTooltip(event: MouseEvent, text: string) {
-  if (!collapsed.value) return
+function showTooltip(event: MouseEvent, text: string, force = false) {
+  if (!force && !collapsed.value) return
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  tooltip.value = {
-    visible: true,
-    text,
-    x: rect.right + 12,
-    y: rect.top + rect.height / 2,
+  
+  // Decide position: right for sidebar, bottom for topbar
+  const isSidebar = (event.currentTarget as HTMLElement).closest('.glass-sidebar')
+  
+  if (isSidebar) {
+    tooltip.value = {
+      visible: true,
+      text,
+      x: rect.right + 12,
+      y: rect.top + rect.height / 2,
+      isSidebar: true
+    }
+  } else {
+    // Default to bottom-center for topbar or other elements
+    tooltip.value = {
+      visible: true,
+      text,
+      x: rect.left + rect.width / 2,
+      y: rect.bottom + 12,
+      isSidebar: false
+    }
   }
 }
 
@@ -264,67 +455,95 @@ function hideTooltip() {
   tooltip.value.visible = false
 }
 
+const toggleLanguage = () => {
+  const newLocale = locale.value === 'zh-CN' ? 'en-US' : 'zh-CN'
+  locale.value = newLocale
+  localStorage.setItem('cf_language', newLocale)
+  toast.success(newLocale === 'zh-CN' ? '已切换至中文' : 'Switched to English')
+}
+
+// Localized Navigation Items
+const mainMenuItems = computed(() => [
+  { label: t('common.dashboard'), path: '/dashboard', icon: HomeOutline },
+  { label: t('common.zones'), path: '/zones', icon: GlobeOutline },
+  { label: t('quickDeploy.title'), path: '/quick-deploy', icon: RocketOutline },
+  { label: t('common.optimize'), path: '/optimize', icon: FlashOutline },
+  { label: t('common.dns'), path: '/dns', icon: BuildOutline },
+  { label: t('common.firewall'), path: '/firewall', icon: ShieldOutline },
+  { label: t('common.workers'), path: '/workers', icon: SettingsOutline },
+  { label: t('common.analytics'), path: '/analytics', icon: AnalyticsOutline },
+  { label: t('common.accounts'), path: '/accounts', icon: PersonOutline },
+  { label: t('common.history'), path: '/history', icon: TimeOutline },
+])
+
 const accountForm = ref({
   apiToken: '',
   alias: ''
 })
 
-const mainMenuItems: { label: string; path: string; icon: Component }[] = [
-  { label: 'Home', path: '/dashboard', icon: HomeOutline },
-  { label: '域名管理', path: '/zones', icon: GlobeOutline },
-  { label: '账户管理', path: '/accounts', icon: PersonOutline },
-  { label: 'Workers', path: '/workers', icon: SettingsOutline },
-  { label: 'Workers KV', path: '/workers-kv', icon: KeyOutline },
-  { label: 'D1 数据库', path: '/d1', icon: ServerOutline },
-  { label: '模板库', path: '/worker-templates', icon: DocumentTextOutline },
-  { label: '一键优选', path: '/quick-deploy', icon: RocketOutline },
-  { label: '自动优化', path: '/optimize', icon: FlashOutline },
-  { label: '操作历史', path: '/history', icon: TimeOutline },
-]
+
 
 const zoneMenuItems = computed(() => {
   if (!currentZone.value) return []
   return [
-    { label: 'DNS 记录', path: '/dns', icon: BuildOutline },
-    { label: 'SSL/TLS', path: '/ssl', icon: LockClosedOutline },
-    { label: '缓存', path: '/cache', icon: FlashOutline },
-    { label: '防火墙', path: '/firewall', icon: ShieldOutline },
-    { label: 'WAF', path: '/waf', icon: FlameOutline, pro: true },
-    { label: '速率限制', path: '/rate-limits', icon: TimerOutline, pro: true },
-    { label: '分析', path: '/analytics', icon: AnalyticsOutline },
-    { label: '页面规则', path: '/page-rules', icon: DocumentOutline },
-    { label: '证书', path: '/certificates', icon: RibbonOutline, pro: true },
+    { label: t('common.dns'), path: '/dns', icon: BuildOutline },
+    { label: t('common.ssl'), path: '/ssl', icon: LockClosedOutline },
+    { label: t('common.cache'), path: '/cache', icon: FlashOutline },
+    { label: t('common.firewall'), path: '/firewall', icon: ShieldOutline },
+    { label: t('common.waf'), path: '/waf', icon: FlameOutline, pro: true },
+    { label: t('common.analytics'), path: '/analytics', icon: AnalyticsOutline },
+    { label: t('common.pageRules'), path: '/page-rules', icon: DocumentOutline },
   ]
 })
 
-const currentTitle = computed(() => route.meta.title as string || 'Home')
+const currentTitle = computed(() => {
+  const titleKey = route.meta.title as string
+  if (!titleKey) return 'Overview'
+  return t(titleKey)
+})
+
+const accountOptions = computed(() => {
+  const options: any[] = [
+    {
+      label: accountStore.currentAccount?.alias || t('layout.currentAccount'),
+      key: 'current',
+      disabled: true
+    },
+    { type: 'divider', key: 'd1' },
+    {
+      label: t('layout.manageAccounts'),
+      key: 'manage',
+      icon: () => h(PersonOutline, { class: 'w-4 h-4' })
+    },
+    {
+      label: t('layout.quickSwitch'),
+      key: 'switch',
+      icon: () => h(SwapHorizontalOutline, { class: 'w-4 h-4' }),
+      children: accountStore.accounts.map(acc => ({
+        label: acc.alias,
+        key: `switch-${acc.id}`,
+        disabled: acc.id === accountStore.currentAccount?.id
+      }))
+    }
+  ]
+  return options
+})
+
+function handleAccountMenuSelect(key: string) {
+  if (key === 'manage') {
+    router.push('/accounts')
+  } else if (key.startsWith('switch-')) {
+    const id = key.replace('switch-', '')
+    accountStore.switchAccount(id)
+    toast.success(t('accounts.switched'))
+    window.location.reload() 
+  }
+}
 
 function toggleZoneDropdown() {
   if (!showZoneDropdown.value && dropdownButton.value) {
     const rect = dropdownButton.value.getBoundingClientRect()
-    const viewportHeight = window.innerHeight
-    const dropdownHeight = 420 // max-height of dropdown
-    
-    // Calculate available space below and above the button
-    const spaceBelow = viewportHeight - rect.bottom
-    const spaceAbove = rect.top
-    
-    // Decide whether to open upward or downward
-    const openUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
-    
-    if (openUpward) {
-      // Position above the button
-      dropdownPosition.value = {
-        x: rect.left,
-        y: rect.top - Math.min(dropdownHeight, spaceAbove - 8) // 8px gap
-      }
-    } else {
-      // Position below the button
-      dropdownPosition.value = {
-        x: rect.left,
-        y: rect.bottom + 8 // 8px below button
-      }
-    }
+    dropdownPosition.value = { x: rect.left, y: rect.bottom + 12 }
   }
   showZoneDropdown.value = !showZoneDropdown.value
 }
@@ -335,11 +554,10 @@ function selectZone(zoneId: string) {
     currentZone.value = zone
     localStorage.setItem('currentZoneId', zone.id)
     showZoneDropdown.value = false
-    console.log('Switched to zone:', zone.name)
+    toast.success(t('layout.zoneSwitched', { name: zone.name }))
   }
 }
 
-// Close dropdown when clicking outside
 function handleClickOutside(event: MouseEvent) {
   if (showZoneDropdown.value && !dropdownButton.value?.contains(event.target as Node)) {
     showZoneDropdown.value = false
@@ -348,19 +566,16 @@ function handleClickOutside(event: MouseEvent) {
 
 async function loadZones() {
   if (!accountStore.currentAccount) return
-
   try {
     zones.value = await cloudflareApi.getZones()
     if (zones.value.length > 0) {
       const savedZoneId = localStorage.getItem('currentZoneId')
       const savedZone = savedZoneId ? zones.value.find(z => z.id === savedZoneId) : null
       currentZone.value = savedZone || zones.value[0]
-      if (currentZone.value) {
-        localStorage.setItem('currentZoneId', currentZone.value.id)
-      }
+      if (currentZone.value) localStorage.setItem('currentZoneId', currentZone.value.id)
     }
-  } catch (error) {
-    console.error('Failed to load zones:', error)
+  } catch (e) {
+    console.error('Failed to load zones')
   }
 }
 
@@ -368,14 +583,22 @@ function toggleTheme() {
   themeStore.setTheme(themeStore.isDark ? 'light' : 'dark')
 }
 
+const triggerSearch = () => {
+  if ((window as any).commandPalette) {
+    (window as any).commandPalette.open()
+  }
+}
+
+const toggleDemoMode = () => {
+  themeStore.toggleDemoMode()
+}
+
 async function handleAddAccount() {
   if (!accountForm.value.apiToken.trim()) return
-
   const account = await accountStore.addAccount({
     apiToken: accountForm.value.apiToken,
-    alias: accountForm.value.alias || 'Cloudflare 账户'
+    alias: accountForm.value.alias || 'New Account'
   })
-
   if (account) {
     accountStore.switchAccount(account.id)
     showAccountModal.value = false
@@ -390,51 +613,34 @@ onMounted(() => {
   } else {
     loadZones()
   }
-  
-  // Add click outside listener
   document.addEventListener('click', handleClickOutside)
 })
 
 provide('currentZone', currentZone)
-
-watch(() => accountStore.currentAccount, () => {
-  loadZones()
-})
+watch(() => accountStore.currentAccount, () => loadZones())
 </script>
 
-<style scoped>
-/* Section Title */
-.section-title {
-  font-size: 12px;
-  color: #888;
-  margin: 20px 12px 10px;
-  font-weight: 600;
+<style>
+/* Global Glass Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(var(--primary-rgb), 0.1);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--primary-rgb), 0.3);
 }
 
-/* Navigation items are styled via island-theme.css .nav-item class */
-
-/* Custom scrollbar for sidebar navigation - matches Island Theme background */
-nav::-webkit-scrollbar {
-  width: 6px;
-}
-
-nav::-webkit-scrollbar-track {
-  background: transparent; /* Transparent to match sidebar background */
-}
-
-nav::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1); /* Very subtle gray */
-  border-radius: 3px;
-}
-
-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2); /* Slightly darker on hover */
-}
-
-/* Firefox scrollbar */
-nav {
+/* Base styles for scrollbar */
+* {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  scrollbar-color: rgba(128, 128, 128, 0.2) transparent;
 }
 </style>
 

@@ -3,19 +3,19 @@
   <div class="animate-in">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-semibold">D1 数据库</h1>
-        <p class="text-sm text-muted-foreground mt-1">无服务器 SQL 数据库</p>
+        <h1 class="text-2xl font-semibold">{{ t('d1.title') }}</h1>
+        <p class="text-sm text-muted-foreground mt-1">{{ t('d1.subtitle') }}</p>
       </div>
       <button class="btn-island-primary" @click="showCreateModal = true">
         <span class="text-lg mr-2">+</span>
-        创建数据库
+        {{ t('d1.createDb') }}
       </button>
     </div>
 
     <!-- Loading -->
     <div v-if="loading" class="empty-state">
       <div class="glass-spinner"></div>
-      <p class="mt-4 text-sm text-muted-foreground">加载中...</p>
+      <p class="mt-4 text-sm text-muted-foreground">{{ t('common.loading') }}</p>
     </div>
 
     <!-- Database List -->
@@ -41,8 +41,8 @@
         <h3 class="font-semibold mb-2">{{ db.name }}</h3>
         <div class="text-xs text-muted-foreground space-y-1">
           <div>UUID: {{ db.uuid }}</div>
-          <div v-if="db.size">大小: {{ formatSize(db.size) }}</div>
-          <div>创建: {{ formatDate(db.created_at) }}</div>
+          <div v-if="db.size">{{ t('d1.size') }}: {{ formatSize(db.size) }}</div>
+          <div>{{ t('d1.createdAt') }}: {{ formatDate(db.created_at) }}</div>
         </div>
       </div>
     </div>
@@ -52,10 +52,10 @@
       <div class="empty-state-icon">
         <component :is="ServerOutline" class="w-7 h-7" />
       </div>
-      <div class="empty-state-title">暂无 D1 数据库</div>
-      <div class="empty-state-desc">创建无服务器 SQL 数据库</div>
+      <div class="empty-state-title">{{ t('d1.noDbs') }}</div>
+      <div class="empty-state-desc">{{ t('d1.createDbDesc') }}</div>
       <button class="btn-island-primary" @click="showCreateModal = true">
-        创建数据库
+        {{ t('d1.createDb') }}
       </button>
     </div>
 
@@ -63,23 +63,23 @@
     <div v-if="showCreateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showCreateModal = false">
       <div class="glass-modal w-full max-w-xl" @click.stop>
         <div class="p-6 border-b border-border">
-          <h2 class="text-xl font-semibold">创建 D1 数据库</h2>
+          <h2 class="text-xl font-semibold">{{ t('d1.createTitle') }}</h2>
         </div>
         
         <div class="p-6 space-y-4">
           <div>
-            <label class="block text-sm font-medium mb-2">数据库名称 *</label>
+            <label class="block text-sm font-medium mb-2">{{ t('d1.dbName') }} *</label>
             <input
               v-model="newDatabase.name"
               class="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="my-database"
+              :placeholder="t('d1.dbNamePlaceholder')"
             />
           </div>
         </div>
 
         <div class="p-6 border-t border-border flex justify-end gap-3">
-          <button class="btn-island-secondary" @click="showCreateModal = false">取消</button>
-          <button class="btn-island-primary" @click="createDatabase">创建</button>
+          <button class="btn-island-secondary" @click="showCreateModal = false">{{ t('common.cancel') }}</button>
+          <button class="btn-island-primary" @click="createDatabase">{{ t('common.confirm') }}</button>
         </div>
       </div>
     </div>
@@ -88,6 +88,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ServerOutline } from '@vicons/ionicons5'
 import { useAccountStore } from '@/stores/account'
 import { cloudflareApi } from '@/api'
@@ -101,6 +102,7 @@ interface D1Database {
   created_at: string
 }
 
+const { t, locale } = useI18n()
 const accountStore = useAccountStore()
 const loading = ref(false)
 const databases = ref<D1Database[]>([])
@@ -113,7 +115,7 @@ const newDatabase = ref({
 async function loadDatabases() {
   const accountId = accountStore.currentAccount?.accountId
   if (!accountId) {
-    toast.error('请先添加账户并确保账户信息已加载')
+    toast.error(t('d1.loadAccountErr'))
     return
   }
 
@@ -122,7 +124,7 @@ async function loadDatabases() {
     databases.value = await cloudflareApi.listD1Databases(accountId)
   } catch (error) {
     console.error('Failed to load D1 databases:', error)
-    toast.error('加载数据库失败')
+    toast.error(t('d1.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -131,12 +133,12 @@ async function loadDatabases() {
 async function createDatabase() {
   const accountId = accountStore.currentAccount?.accountId
   if (!accountId) {
-    toast.error('请先添加账户')
+    toast.error(t('d1.addAccountErr'))
     return
   }
 
   if (!newDatabase.value.name) {
-    toast.warning('请输入数据库名称')
+    toast.warning(t('d1.inputNameErr'))
     return
   }
 
@@ -145,39 +147,39 @@ async function createDatabase() {
       account_id: accountId,
       name: newDatabase.value.name
     })
-    logHistory.worker('创建 D1 数据库', `数据库: ${newDatabase.value.name}`)
-    toast.success('数据库已创建')
+    logHistory.worker(t('d1.logCreate'), `${t('d1.title')}: ${newDatabase.value.name}`)
+    toast.success(t('d1.createSuccess'))
     showCreateModal.value = false
     newDatabase.value = { name: '' }
     loadDatabases()
   } catch (error: any) {
     console.error('Failed to create database:', error)
-    toast.error(error.message || '创建失败')
+    toast.error(error.message || t('common.updateFailed'))
   }
 }
 
 async function deleteDatabase(db: D1Database) {
   const accountId = accountStore.currentAccount?.accountId
   if (!accountId) {
-    toast.error('账户信息缺失')
+    toast.error(t('d1.addAccountErr'))
     return
   }
 
-  if (!confirm(`确定要删除数据库 "${db.name}" 吗？`)) return
+  if (!confirm(t('d1.deleteConfirm', { name: db.name }))) return
 
   try {
     await cloudflareApi.deleteD1Database(accountId, db.uuid)
-    logHistory.worker('删除 D1 数据库', `数据库: ${db.name}`)
-    toast.success('数据库已删除')
+    logHistory.worker(t('d1.logDelete'), `${t('d1.title')}: ${db.name}`)
+    toast.success(t('d1.deleteSuccess'))
     loadDatabases()
   } catch (error) {
     console.error('Failed to delete database:', error)
-    toast.error('删除失败')
+    toast.error(t('common.deleteFailed'))
   }
 }
 
 function viewDatabase(db: D1Database) {
-  toast.info('数据库查询功能即将上线')
+  toast.info(t('d1.queryFeatureSoon'))
 }
 
 function formatSize(bytes: number): string {
@@ -188,7 +190,7 @@ function formatSize(bytes: number): string {
 
 function formatDate(dateString: string): string {
   if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('zh-CN')
+  return new Date(dateString).toLocaleDateString(locale.value === 'zh-CN' ? 'zh-CN' : 'en-US')
 }
 
 onMounted(() => {

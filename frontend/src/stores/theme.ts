@@ -1,12 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { GlobalThemeOverrides } from 'naive-ui'
 
 export type ThemeMode = 'light' | 'dark' | 'auto'
 
 export const useThemeStore = defineStore('theme', () => {
   const mode = ref<ThemeMode>('light')
   const isDark = ref(false)
+  const isDemoMode = ref(false)
+
+  function toggleDemoMode() {
+    isDemoMode.value = !isDemoMode.value
+  }
 
   // 从 localStorage 加载主题
   function loadTheme() {
@@ -68,7 +72,9 @@ export const useThemeStore = defineStore('theme', () => {
   return {
     mode,
     isDark,
+    isDemoMode,
     setTheme,
-    applyTheme
+    applyTheme,
+    toggleDemoMode
   }
 })

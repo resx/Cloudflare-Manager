@@ -13,21 +13,30 @@ const api: AxiosInstance = axios.create({
 // 请求拦截器 - 自动添加凭证
 api.interceptors.request.use(
   (config) => {
+    // 允许某些请求不带凭证（如果有的话，目前没有）
+    if (config.url?.includes('/public/')) {
+      return config
+    }
+
     const accountStore = useAccountStore()
     const credentials = accountStore.getCurrentCredentials()
 
-    // 确保所有请求都有 credentials
-    if (credentials) {
-      // 如果没有 data，初始化为空对象
-      if (!config.data) {
-        config.data = {}
-      }
+    // 如果没有凭证，直接拦截并报错，避免发送到后端触发 500
+    if (!credentials) {
+      const error = new Error('MISSING_CREDENTIALS')
+      return Promise.reject(error)
+    }
 
-      // 添加 credentials
-      config.data = {
-        credentials,
-        ...config.data
-      }
+    // 确保所有请求都有 credentials
+    // 如果没有 data，初始化为空对象
+    if (!config.data) {
+      config.data = {}
+    }
+
+    // 添加 credentials
+    config.data = {
+      credentials,
+      ...config.data
     }
 
     return config
@@ -43,6 +52,13 @@ api.interceptors.response.use(
     return response.data
   },
   (error) => {
+    // 处理本地主动拦截的“缺少凭证”错误
+    if (error.message === 'MISSING_CREDENTIALS') {
+      const silentError = new Error('请先关联 Cloudflare 账户')
+      Object.assign(silentError, { silent: true, status: 401 })
+      return Promise.reject(silentError)
+    }
+
     console.error('API Error:', error)
 
     // 提取错误信息

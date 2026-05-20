@@ -22,7 +22,7 @@
 | **Zone Settings** | **Edit** | 域名设置、自动优化 | 修改域名配置，执行优化操作 |
 | **DNS** | **Edit** | DNS 记录管理 | 创建、更新、删除 DNS 记录 |
 | **Cache Purge** | **Purge** | 缓存管理 | 清除缓存 |
-| **SSL and Certificates** | **Edit** | SSL 证书管理 | 上传、删除自定义证书 |
+| **SSL and Certificates** | **Edit/Write** | SSL 证书管理、SaaS 优选 | 上传、删除自定义证书，创建 Custom Hostname，设置 Fallback Origin |
 | **Page Rules** | **Edit** | 页面规则 | 创建、更新、删除页面规则 |
 | **Firewall Services** | **Edit** | 防火墙规则 | 创建、更新、删除防火墙规则 |
 | **WAF** | **Edit** | WAF 管理 | 修改 WAF 规则和包配置 |
@@ -155,7 +155,29 @@
   - `DELETE /zones/{zone_id}/pagerules/{rule_id}`
 - **所需权限**: Page Rules - Edit
 
-### 13. WAF 管理
+### 13. SaaS 优选 / Custom Hostnames
+- **功能**:
+  - 查看 Custom Hostname 列表
+  - 创建、删除 Custom Hostname
+  - 获取和设置 Custom Hostnames Fallback Origin
+  - 自动创建验证 TXT/CNAME 记录和优选 DNS 记录
+- **API 调用**:
+  - `GET /zones/{zone_id}/custom_hostnames`
+  - `POST /zones/{zone_id}/custom_hostnames`
+  - `DELETE /zones/{zone_id}/custom_hostnames/{custom_hostname_id}`
+  - `GET /zones/{zone_id}/custom_hostnames/fallback_origin`
+  - `PUT /zones/{zone_id}/custom_hostnames/fallback_origin`
+  - `POST /zones/{zone_id}/dns_records`
+- **所需权限**:
+  - SSL and Certificates - Edit/Write
+  - DNS - Edit
+  - Zone - Read
+- **注意事项**:
+  - Cloudflare API 文档对 Custom Hostnames 和 Fallback Origin 端点标注的权限为 `SSL and Certificates Write`。
+  - 在 Dashboard API Token 界面中，该权限可能显示为 `SSL and Certificates - Edit`。
+  - Fallback Origin 应指向当前 Zone 中已代理的 A、AAAA 或 CNAME 记录。
+
+### 14. WAF 管理
 - **功能**:
   - 查看 WAF 包和规则
   - 修改规则模式和包配置
@@ -166,7 +188,7 @@
   - `PATCH /zones/{zone_id}/firewall/waf/packages/{package_id}`
 - **所需权限**: WAF - Edit
 
-### 14. 速率限制 (Rate Limiting)
+### 15. 速率限制 (Rate Limiting)
 - **功能**: 创建、更新、删除速率限制规则
 - **API 调用**:
   - `GET /zones/{zone_id}/rate_limits`
@@ -175,7 +197,7 @@
   - `DELETE /zones/{zone_id}/rate_limits/{rate_limit_id}`
 - **所需权限**: Firewall Services - Edit
 
-### 15. 统计分析 (Analytics)
+### 16. 统计分析 (Analytics)
 - **功能**: 查看流量、缓存、性能等统计数据
 - **API 调用**: GraphQL Analytics API
 - **所需权限**: Zone Analytics - Read
@@ -222,7 +244,7 @@
 - Zone Settings - Edit
 - DNS - Edit
 - Cache Purge - Purge
-- SSL and Certificates - Edit
+- SSL and Certificates - Edit/Write
 - Page Rules - Edit
 - Firewall Services - Edit
 - WAF - Edit
@@ -256,6 +278,9 @@ A: 因为系统支持执行所有类型的 SQL 语句，包括 INSERT、UPDATE�
 
 ### Q: 可以使用 Global API Key 吗？
 A: 不推荐。本系统专为 API Token 设计，更安全且支持细粒度权限控制。
+
+### Q: SaaS 优选为什么需要 SSL and Certificates 权限？
+A: SaaS 优选会调用 Cloudflare Custom Hostnames 和 Fallback Origin API。Cloudflare API 文档要求这些端点具备 `SSL and Certificates Write` 权限；在 Dashboard 的 Token 权限界面中通常对应 `SSL and Certificates - Edit`。
 
 ## 安全建议
 

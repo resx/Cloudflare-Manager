@@ -1,183 +1,251 @@
 <template>
-  <n-space vertical :size="24">
-    <!-- 缓存配置 -->
-    <n-card title="缓存配置">
-      <n-spin :show="loading">
-        <n-space vertical :size="16">
-          <!-- 缓存级别 -->
-          <n-form-item label="缓存级别">
-            <n-select
-              v-model:value="cacheLevel"
-              :options="cacheLevelOptions"
-              :loading="updating"
-              @update:value="handleCacheLevelChange"
-              style="width: 400px"
-            />
-            <template #feedback>
-              <n-text depth="3" style="font-size: 12px">
-                {{ getCacheLevelDescription(cacheLevel) }}
-              </n-text>
-            </template>
-          </n-form-item>
+  <div class="animate-in space-y-8 pb-12">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-1">
+      <div>
+        <h1 class="text-3xl font-bold text-foreground tracking-tight">{{ t('cache.title') }}</h1>
+        <p class="text-sm text-muted-foreground mt-1 font-medium italic">
+          {{ currentZone?.name || t('zones.notSelected') }} · {{ t('cache.subtitle') }}
+        </p>
+      </div>
+      <div class="flex gap-3">
+        <IslandButton variant="danger" @click="handlePurgeAllCache" :loading="purging">
+          <template #icon><component :is="TrashOutline" class="w-4 h-4" /></template>
+          {{ t('cache.purgeAll') }}
+        </IslandButton>
+      </div>
+    </header>
 
-          <!-- 浏览器缓存 TTL -->
-          <n-form-item label="浏览器缓存 TTL">
-            <n-select
-              v-model:value="browserCacheTTL"
-              :options="browserCacheTTLOptions"
-              :loading="updating"
-              @update:value="handleBrowserCacheTTLChange"
-              style="width: 400px"
-            />
-            <template #feedback>
-              <n-text depth="3" style="font-size: 12px">
-                控制浏览器缓存资源的时长
-              </n-text>
-            </template>
-          </n-form-item>
-
-          <!-- 开发模式 -->
-          <n-form-item label="开发模式">
-            <n-switch
-              v-model:value="developmentMode"
-              :loading="updating"
-              @update:value="handleDevelopmentModeChange"
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <!-- Left: Settings & Purge -->
+      <div class="xl:col-span-2 space-y-8">
+        <!-- Quick Purge Actions -->
+        <section class="space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">{{ t('cache.quickPurge') }}</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <GlassCard 
+              :padding="6" 
+              class="group cursor-pointer hover:border-primary/40 transition-all active:scale-[0.98]"
+              @click="showPurgeByURLModal = true"
             >
-              <template #checked>已启用</template>
-              <template #unchecked>已禁用</template>
-            </n-switch>
-            <template #feedback>
-              <n-text depth="3" style="font-size: 12px">
-                临时绕过缓存，用于开发和测试（自动在 3 小时后关闭）
-              </n-text>
-            </template>
-          </n-form-item>
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                  <component :is="LinkOutline" class="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 class="font-bold text-foreground">{{ t('cache.purgeByURL') }}</h4>
+                  <p class="text-xs text-muted-foreground">{{ t('cache.purgeByURLDesc') }}</p>
+                </div>
+              </div>
+            </GlassCard>
 
-          <!-- 查询字符串排序 -->
-          <n-form-item label="查询字符串排序">
-            <n-switch
-              v-model:value="sortQueryString"
-              :loading="updating"
-              @update:value="handleSortQueryStringChange"
+            <GlassCard 
+              :padding="6" 
+              class="group cursor-pointer hover:border-secondary/40 transition-all active:scale-[0.98]"
+              @click="showPurgeByTagModal = true"
             >
-              <template #checked>已启用</template>
-              <template #unchecked>已禁用</template>
-            </n-switch>
-            <template #feedback>
-              <n-text depth="3" style="font-size: 12px">
-                对 URL 查询字符串进行排序以提高缓存命中率
-              </n-text>
-            </template>
-          </n-form-item>
-        </n-space>
-      </n-spin>
-    </n-card>
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:bg-secondary group-hover:text-white transition-all">
+                  <component :is="PricetagOutline" class="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 class="font-bold text-foreground">{{ t('cache.purgeByTag') }}</h4>
+                  <p class="text-xs text-muted-foreground">{{ t('cache.purgeByTagDesc') }}</p>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
+        </section>
 
-    <!-- 缓存清除 -->
-    <n-card title="清除缓存">
-      <n-space vertical :size="16">
-        <n-alert type="warning">
-          清除缓存将删除 Cloudflare 服务器上的所有缓存文件，下次访问时需要重新从源服务器获取。
-        </n-alert>
+        <!-- Core Settings -->
+        <section class="space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">{{ t('cache.cachePolicy') }}</h3>
+          <div class="space-y-4">
+            <!-- Cache Level -->
+            <GlassCard :padding="6">
+              <div class="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+                <div class="space-y-1 max-w-md">
+                  <h4 class="font-bold text-foreground flex items-center gap-2">
+                    <component :is="LayersOutline" class="w-4 h-4 text-primary" />
+                    {{ t('cache.cacheLevel') }}
+                  </h4>
+                  <p class="text-xs text-muted-foreground">{{ getCacheLevelDescription(cacheLevel) }}</p>
+                </div>
+                <select 
+                  v-model="cacheLevel" 
+                  class="w-full md:w-48 bg-foreground/5 border border-border/50 rounded-xl px-4 py-2.5 text-sm outline-none cursor-pointer focus:ring-2 focus:ring-primary/30 transition-all"
+                  @change="e => handleCacheLevelChange((e.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="opt in cacheLevelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+            </GlassCard>
 
-        <n-space>
-          <n-button
-            type="primary"
-            :loading="purging"
-            @click="handlePurgeAllCache"
-          >
-            清除所有缓存
-          </n-button>
+            <!-- Browser TTL -->
+            <GlassCard :padding="6">
+              <div class="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+                <div class="space-y-1 max-w-md">
+                  <h4 class="font-bold text-foreground flex items-center gap-2">
+                    <component :is="TimeOutline" class="w-4 h-4 text-primary" />
+                    {{ t('cache.browserTTL') }}
+                  </h4>
+                  <p class="text-xs text-muted-foreground">{{ t('cache.browserTTLDesc') }}</p>
+                </div>
+                <select 
+                  v-model="browserCacheTTL" 
+                  class="w-full md:w-48 bg-foreground/5 border border-border/50 rounded-xl px-4 py-2.5 text-sm outline-none cursor-pointer focus:ring-2 focus:ring-primary/30 transition-all"
+                  @change="e => handleBrowserCacheTTLChange(Number((e.target as HTMLSelectElement).value))"
+                >
+                  <option v-for="opt in browserCacheTTLOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+            </GlassCard>
 
-          <n-button
-            :loading="purging"
-            @click="showPurgeByURLModal = true"
-          >
-            按 URL 清除
-          </n-button>
+            <!-- Toggle Settings Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <GlassCard :padding="5" class="flex items-center justify-between gap-4">
+                <div class="space-y-0.5">
+                  <h5 class="text-sm font-bold">{{ t('cache.devMode') }}</h5>
+                  <p class="text-[10px] text-muted-foreground">{{ t('cache.devModeDesc') }}</p>
+                </div>
+                <n-switch v-model:value="developmentMode" :loading="updating" @update:value="handleDevelopmentModeChange" size="small" />
+              </GlassCard>
 
-          <n-button
-            :loading="purging"
-            @click="showPurgeByTagModal = true"
-          >
-            按标签清除
-          </n-button>
-        </n-space>
+              <GlassCard :padding="5" class="flex items-center justify-between gap-4">
+                <div class="space-y-0.5">
+                  <h5 class="text-sm font-bold">{{ t('cache.sortQuery') }}</h5>
+                  <p class="text-[10px] text-muted-foreground">{{ t('cache.sortQueryDesc') }}</p>
+                </div>
+                <n-switch v-model:value="sortQueryString" :loading="updating" @update:value="handleSortQueryStringChange" size="small" />
+              </GlassCard>
+            </div>
+          </div>
+        </section>
+      </div>
 
-        <!-- 缓存统计 -->
-        <n-descriptions v-if="cacheStats.requests > 0" :column="3" bordered style="margin-top: 16px">
-          <n-descriptions-item label="总请求数">
-            {{ formatNumber(cacheStats.requests) }}
-          </n-descriptions-item>
-          <n-descriptions-item label="缓存命中">
-            {{ formatNumber(cacheStats.cached) }}
-          </n-descriptions-item>
-          <n-descriptions-item label="缓存命中率">
-            {{ cacheStats.hitRate }}%
-          </n-descriptions-item>
-        </n-descriptions>
-      </n-space>
-    </n-card>
+      <!-- Right: Stats & Info -->
+      <div class="space-y-8">
+        <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">{{ t('cache.performance24h') }}</h3>
+        <GlassCard :padding="8" class="border-primary/20 bg-primary/[0.02] relative overflow-hidden">
+          <!-- Background Decoration -->
+          <div class="absolute -right-8 -top-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
+          
+          <div class="relative space-y-8">
+            <div class="text-center space-y-2">
+              <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">{{ t('cache.avgHitRate') }}</span>
+              <div class="text-5xl font-black text-foreground tracking-tighter">
+                {{ cacheStats.hitRate }}<span class="text-2xl text-primary">%</span>
+              </div>
+            </div>
 
-    <!-- 按 URL 清除缓存弹窗 -->
-    <n-modal v-model:show="showPurgeByURLModal" preset="dialog" title="按 URL 清除缓存" style="width: 600px">
-      <n-space vertical>
-        <n-alert type="info">
-          每行输入一个 URL，最多 30 个
-        </n-alert>
-        <n-input
-          v-model:value="purgeURLs"
-          type="textarea"
-          placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-          :rows="6"
-        />
-      </n-space>
+            <div class="grid grid-cols-2 gap-4 pt-6 border-t border-border/30">
+              <div class="space-y-1">
+                <p class="text-[10px] font-bold text-muted-foreground uppercase">{{ t('analytics.totalRequests') }}</p>
+                <p class="text-lg font-bold">{{ formatNumber(cacheStats.requests) }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[10px] font-bold text-muted-foreground uppercase">{{ t('cache.savings') }}</p>
+                <p class="text-lg font-bold text-emerald-500">{{ formatNumber(cacheStats.cached) }}</p>
+              </div>
+            </div>
 
-      <template #action>
-        <n-space>
-          <n-button @click="showPurgeByURLModal = false">取消</n-button>
-          <n-button type="primary" :loading="purging" @click="handlePurgeByURL">
-            清除
-          </n-button>
-        </n-space>
-      </template>
+            <div class="p-4 bg-foreground/5 rounded-2xl flex items-start gap-3">
+              <component :is="InformationCircleOutline" class="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <p class="text-[10px] text-muted-foreground leading-relaxed">
+                {{ t('cache.performanceTip') }}
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+
+        <div class="p-6 rounded-3xl border border-dashed border-border/50 space-y-3">
+          <h4 class="text-xs font-bold uppercase text-muted-foreground">{{ t('cache.nodeStatus') }}</h4>
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span class="text-xs font-medium">{{ t('cache.centersSynced') }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <n-modal v-model:show="showPurgeByURLModal">
+      <GlassCard class="w-[500px] max-w-[95vw]" :padding="0">
+        <div class="p-6 border-b border-border/50 flex justify-between items-center">
+          <h2 class="text-xl font-bold">{{ t('cache.purgeByURL') }}</h2>
+          <button @click="showPurgeByURLModal = false" class="text-muted-foreground hover:text-foreground">
+            <component :is="CloseOutline" class="w-5 h-5" />
+          </button>
+        </div>
+        <div class="p-8 space-y-4">
+          <div class="p-4 bg-primary/5 border border-primary/10 rounded-xl text-xs text-primary font-medium leading-relaxed">
+            {{ t('cache.purgeByURLExplain') }}
+          </div>
+          <textarea
+            v-model="purgeURLs"
+            class="w-full h-48 bg-slate-950 text-emerald-500 border border-border/50 rounded-xl p-4 font-mono text-xs focus:outline-none shadow-inner"
+            placeholder="https://example.com/logo.png&#10;https://example.com/style.css"
+          ></textarea>
+        </div>
+        <div class="p-6 border-t border-border/50 flex justify-end gap-3">
+          <IslandButton variant="secondary" @click="showPurgeByURLModal = false">{{ t('common.cancel') }}</IslandButton>
+          <IslandButton @click="handlePurgeByURL" :loading="purging">{{ t('cache.executePurge') }}</IslandButton>
+        </div>
+      </GlassCard>
     </n-modal>
 
-    <!-- 按标签清除缓存弹窗 -->
-    <n-modal v-model:show="showPurgeByTagModal" preset="dialog" title="按标签清除缓存" style="width: 600px">
-      <n-space vertical>
-        <n-alert type="info">
-          输入缓存标签，多个标签用逗号分隔
-        </n-alert>
-        <n-input
-          v-model:value="purgeTags"
-          placeholder="tag1, tag2, tag3"
-        />
-      </n-space>
-
-      <template #action>
-        <n-space>
-          <n-button @click="showPurgeByTagModal = false">取消</n-button>
-          <n-button type="primary" :loading="purging" @click="handlePurgeByTag">
-            清除
-          </n-button>
-        </n-space>
-      </template>
+    <n-modal v-model:show="showPurgeByTagModal">
+      <GlassCard class="w-[500px] max-w-[95vw]" :padding="0">
+        <div class="p-6 border-b border-border/50 flex justify-between items-center">
+          <h2 class="text-xl font-bold">{{ t('cache.purgeByTag') }}</h2>
+          <button @click="showPurgeByTagModal = false" class="text-muted-foreground hover:text-foreground">
+            <component :is="CloseOutline" class="w-5 h-5" />
+          </button>
+        </div>
+        <div class="p-8 space-y-4">
+          <div class="p-4 bg-secondary/5 border border-secondary/10 rounded-xl text-xs text-secondary font-medium leading-relaxed">
+            {{ t('cache.purgeByTagExplain') }}
+          </div>
+          <input
+            v-model="purgeTags"
+            class="w-full bg-foreground/5 border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-secondary/30 outline-none transition-all"
+            placeholder="images, static-v1"
+          />
+        </div>
+        <div class="p-6 border-t border-border/50 flex justify-end gap-3">
+          <IslandButton variant="secondary" @click="showPurgeByTagModal = false">{{ t('common.cancel') }}</IslandButton>
+          <IslandButton variant="secondary" class="!bg-secondary/20 !text-secondary hover:!bg-secondary/30" @click="handlePurgeByTag" :loading="purging">
+            {{ t('cache.purgeTagContent') }}
+          </IslandButton>
+        </div>
+      </GlassCard>
     </n-modal>
-  </n-space>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, inject, type Ref } from 'vue'
-import { useMessage, useDialog } from 'naive-ui'
+import { ref, onMounted, watch, inject, type Ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { NSwitch, NModal, useDialog } from 'naive-ui'
+import { 
+  TrashOutline, 
+  LinkOutline, 
+  PricetagOutline, 
+  LayersOutline, 
+  TimeOutline,
+  InformationCircleOutline,
+  CloseOutline 
+} from '@vicons/ionicons5'
 import { cloudflareApi, type Zone } from '@/api'
+import { useAccountStore } from '@/stores/account'
 import { toast } from '@/utils/toast'
 import { logHistory } from '@/utils/history'
+import GlassCard from '@/components/ui/GlassCard.vue'
+import IslandButton from '@/components/ui/IslandButton.vue'
 
-const message = useMessage()
+const { t } = useI18n()
 const dialog = useDialog()
-
-// 从 Layout 获取当前域名
+const accountStore = useAccountStore()
 const currentZone = inject<Ref<Zone | null>>('currentZone')
 
 const loading = ref(false)
@@ -205,38 +273,31 @@ const cacheStats = ref({
 })
 
 // 缓存级别选项
-const cacheLevelOptions = [
-  { label: '不缓存 (No Query String)', value: 'basic' },
-  { label: '标准 (Ignore Query String)', value: 'simplified' },
-  { label: '积极 (Standard)', value: 'aggressive' }
-]
+const cacheLevelOptions = computed(() => [
+  { label: t('cache.levelBasic'), value: 'basic' },
+  { label: t('cache.levelSimplified'), value: 'simplified' },
+  { label: t('cache.levelAggressive'), value: 'aggressive' }
+])
 
 // 浏览器缓存 TTL 选项（秒）
-const browserCacheTTLOptions = [
-  { label: '30 分钟', value: 1800 },
-  { label: '1 小时', value: 3600 },
-  { label: '2 小时', value: 7200 },
-  { label: '4 小时', value: 14400 },
-  { label: '8 小时', value: 28800 },
-  { label: '16 小时', value: 57600 },
-  { label: '1 天', value: 86400 },
-  { label: '2 天', value: 172800 },
-  { label: '3 天', value: 259200 },
-  { label: '4 天', value: 345600 },
-  { label: '5 天', value: 432000 },
-  { label: '8 天', value: 691200 },
-  { label: '16 天', value: 1382400 },
-  { label: '1 个月', value: 2678400 },
-  { label: '2 个月', value: 5356800 },
-  { label: '6 个月', value: 15552000 },
-  { label: '1 年', value: 31536000 }
-]
+const browserCacheTTLOptions = computed(() => [
+  { label: `30 ${t('common.minutes')}`, value: 1800 },
+  { label: `1 ${t('common.hours')}`, value: 3600 },
+  { label: `2 ${t('common.hours')}`, value: 7200 },
+  { label: `4 ${t('common.hours')}`, value: 14400 },
+  { label: `8 ${t('common.hours')}`, value: 28800 },
+  { label: `16 ${t('common.hours')}`, value: 57600 },
+  { label: `1 ${t('common.days')}`, value: 86400 },
+  { label: `2 ${t('common.days')}`, value: 172800 },
+  { label: `1 ${t('common.months')}`, value: 2678400 },
+  { label: `1 ${t('common.years')}`, value: 31536000 }
+])
 
 function getCacheLevelDescription(level: string): string {
   const descriptions: Record<string, string> = {
-    basic: '忽略查询字符串，所有静态资源使用同一缓存',
-    simplified: '仅缓存静态文件，忽略查询字符串',
-    aggressive: '缓存所有静态内容，包括带查询字符串的资源'
+    basic: t('cache.levelBasicDesc'),
+    simplified: t('cache.levelSimplifiedDesc'),
+    aggressive: t('cache.levelAggressiveDesc')
   }
   return descriptions[level] || ''
 }
@@ -246,34 +307,24 @@ function formatNumber(num: number): string {
 }
 
 async function loadCacheSettings() {
-  if (!currentZone?.value?.id) {
-    console.log('No currentZone available for cache settings')
+  if (!currentZone?.value?.id || !accountStore.currentAccount) {
+    loading.value = false
     return
   }
 
-  console.log('Loading cache settings for zone:', currentZone.value.name)
   loading.value = true
   try {
     const settings = await cloudflareApi.getZoneSettings(currentZone.value.id)
 
     settings.forEach((setting: any) => {
       switch (setting.id) {
-        case 'cache_level':
-          cacheLevel.value = setting.value
-          break
-        case 'browser_cache_ttl':
-          browserCacheTTL.value = setting.value
-          break
-        case 'development_mode':
-          developmentMode.value = setting.value === 'on'
-          break
-        case 'sort_query_string_for_cache':
-          sortQueryString.value = setting.value === 'on'
-          break
+        case 'cache_level': cacheLevel.value = setting.value; break
+        case 'browser_cache_ttl': browserCacheTTL.value = setting.value; break
+        case 'development_mode': developmentMode.value = setting.value === 'on'; break
+        case 'sort_query_string_for_cache': sortQueryString.value = setting.value === 'on'; break
       }
     })
 
-    // 获取缓存统计数据（从 Analytics API）
     try {
       const analytics = await cloudflareApi.getAnalytics(currentZone.value.id, '24h')
       cacheStats.value = {
@@ -281,83 +332,57 @@ async function loadCacheSettings() {
         cached: analytics.timeseries.reduce((sum, point) => sum + point.cached, 0),
         hitRate: Math.round(analytics.stats.cacheHitRate * 10) / 10
       }
-    } catch (error) {
-      console.warn('Failed to load cache stats:', error)
-      // 如果获取统计失败，使用默认值
-      cacheStats.value = {
-        requests: 0,
-        cached: 0,
-        hitRate: 0
-      }
-    }
+    } catch (e) { /* ignore */ }
   } catch (error: any) {
-    message.error(error?.message || '加载缓存设置失败')
+    if (!error.silent) toast.error(t('cache.syncFailed'))
   } finally {
     loading.value = false
   }
 }
 
 async function updateSetting(id: string, value: any) {
-  if (!currentZone?.value?.id) {
-    message.error('未选择域名')
-    return
-  }
+  if (!currentZone?.value?.id) return
 
   updating.value = true
   try {
     await cloudflareApi.updateZoneSettings(currentZone.value.id, [{ id, value }])
-    logHistory.cache('更新缓存设置', `缓存级别：${cacheLevel.value}，浏览器TTL：${browserCacheTTL.value}`)
-    toast.success('缓存设置已更新')
+    logHistory.cache('配置更新', `已调整缓存策略: ${id}`)
+    toast.success(t('common.updateSuccess'))
   } catch (error: any) {
-    message.error(error?.message || '更新设置失败')
+    toast.error(t('common.updateFailed'))
     await loadCacheSettings()
   } finally {
     updating.value = false
   }
 }
 
-function handleCacheLevelChange(value: string) {
-  updateSetting('cache_level', value)
-}
-
-function handleBrowserCacheTTLChange(value: number) {
-  updateSetting('browser_cache_ttl', value)
-}
+const handleCacheLevelChange = (val: string) => updateSetting('cache_level', val)
+const handleBrowserCacheTTLChange = (val: number) => updateSetting('browser_cache_ttl', val)
+const handleSortQueryStringChange = (val: boolean) => updateSetting('sort_query_string_for_cache', val ? 'on' : 'off')
 
 function handleDevelopmentModeChange(value: boolean) {
   if (value) {
     dialog.warning({
-      title: '确认启用开发模式',
-      content: '开发模式将绕过缓存，可能会增加源服务器负载。此模式将在 3 小时后自动关闭。',
-      positiveText: '确认',
-      negativeText: '取消',
-      onPositiveClick: () => {
-        updateSetting('development_mode', 'on')
-      },
-      onNegativeClick: () => {
-        developmentMode.value = false
-      }
+      title: t('cache.devModeEnable'),
+      content: t('cache.devModeExplain'),
+      positiveText: t('common.confirm'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: () => updateSetting('development_mode', 'on'),
+      onNegativeClick: () => developmentMode.value = false
     })
   } else {
     updateSetting('development_mode', 'off')
   }
 }
 
-function handleSortQueryStringChange(value: boolean) {
-  updateSetting('sort_query_string_for_cache', value ? 'on' : 'off')
-}
-
 function handlePurgeAllCache() {
-  if (!currentZone?.value?.id) {
-    message.error('未选择域名')
-    return
-  }
+  if (!currentZone?.value?.id) return
 
-  dialog.warning({
-    title: '确认清除所有缓存',
-    content: '此操作将清除该域名下的所有缓存文件，可能会暂时增加源服务器负载。确定继续吗？',
-    positiveText: '确认清除',
-    negativeText: '取消',
+  dialog.error({
+    title: t('cache.purgeAllTitle'),
+    content: t('cache.purgeAllExplain'),
+    positiveText: t('cache.purgeConfirm'),
+    negativeText: t('common.cancel'),
     onPositiveClick: async () => {
       purging.value = true
       try {
@@ -365,10 +390,10 @@ function handlePurgeAllCache() {
           zone_id: currentZone.value!.id,
           purge_everything: true
         })
-        logHistory.cache('清除所有缓存', '清除域名所有缓存')
-        toast.success('缓存已清除')
+        logHistory.cache('全站清理', '手动清空所有边缘缓存')
+        toast.success(t('cache.purgeSuccess'))
       } catch (error: any) {
-        message.error(error?.message || '清除缓存失败')
+        toast.error(t('common.updateFailed'))
       } finally {
         purging.value = false
       }
@@ -377,81 +402,43 @@ function handlePurgeAllCache() {
 }
 
 async function handlePurgeByURL() {
-  if (!currentZone?.value?.id) {
-    message.error('未选择域名')
-    return
-  }
-
+  if (!currentZone?.value?.id) return
   const urls = purgeURLs.value.split('\n').filter(url => url.trim())
-
-  if (urls.length === 0) {
-    message.warning('请输入至少一个 URL')
-    return
-  }
-
-  if (urls.length > 30) {
-    message.warning('最多支持 30 个 URL')
-    return
-  }
+  if (urls.length === 0) return toast.warning(t('cache.inputURL'))
 
   purging.value = true
   try {
-    await cloudflareApi.purgeCache({
-      zone_id: currentZone.value.id,
-      files: urls
-    })
-    logHistory.cache('清除指定 URL 缓存', `清除 ${urls.length} 个URL`)
-    toast.success(`URL 缓存已清除`)
+    await cloudflareApi.purgeCache({ zone_id: currentZone.value.id, files: urls })
+    logHistory.cache('精准清理', `清除了 ${urls.length} 个资源`)
+    toast.success(t('cache.purgeSuccess'))
     showPurgeByURLModal.value = false
     purgeURLs.value = ''
   } catch (error: any) {
-    message.error(error?.message || '清除缓存失败')
+    toast.error(t('common.updateFailed'))
   } finally {
     purging.value = false
   }
 }
 
 async function handlePurgeByTag() {
-  if (!currentZone?.value?.id) {
-    message.error('未选择域名')
-    return
-  }
-
+  if (!currentZone?.value?.id) return
   const tags = purgeTags.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-
-  if (tags.length === 0) {
-    message.warning('请输入至少一个标签')
-    return
-  }
-
-  if (tags.length > 30) {
-    message.warning('最多支持 30 个标签')
-    return
-  }
+  if (tags.length === 0) return toast.warning(t('cache.inputTag'))
 
   purging.value = true
   try {
-    await cloudflareApi.purgeCache({
-      zone_id: currentZone.value.id,
-      tags: tags
-    })
-    logHistory.cache('清除指定标签缓存', `清除标签 "${tags.join(', ')}"`)
-    toast.success(`标签缓存已清除`)
+    await cloudflareApi.purgeCache({ zone_id: currentZone.value.id, tags: tags })
+    logHistory.cache('标签清理', `清除了标签: ${tags.join(', ')}`)
+    toast.success(t('cache.purgeSuccess'))
     showPurgeByTagModal.value = false
     purgeTags.value = ''
   } catch (error: any) {
-    message.error(error?.message || '清除缓存失败')
+    toast.error(t('common.updateFailed'))
   } finally {
     purging.value = false
   }
 }
 
-onMounted(() => {
-  loadCacheSettings()
-})
-
-// 监听 currentZone 变化，自动重新加载缓存设置
-watch(() => currentZone?.value?.id, () => {
-  loadCacheSettings()
-})
+onMounted(() => loadCacheSettings())
+watch(() => currentZone?.value?.id, () => loadCacheSettings())
 </script>

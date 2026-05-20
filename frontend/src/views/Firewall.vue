@@ -1,161 +1,250 @@
 <template>
-  <n-space vertical :size="24">
-    <n-card title="防火墙规则管理">
-      <template #header-extra>
-        <n-button type="primary" @click="showAddModal = true">
-          添加规则
-        </n-button>
-      </template>
+  <div class="animate-in space-y-8 pb-12">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 px-1">
+      <div>
+        <h1 class="text-3xl font-bold text-foreground tracking-tight">{{ t('firewall.title') }}</h1>
+        <p class="text-sm text-muted-foreground mt-1 font-medium italic">
+          {{ currentZone?.name || t('zones.notSelected') }} · {{ t('firewall.subtitle') }}
+        </p>
+      </div>
+      <IslandButton @click="showAddModal = true">
+        <template #icon><component :is="AddOutline" class="w-4 h-4" /></template>
+        {{ t('firewall.addRule') }}
+      </IslandButton>
+    </header>
 
-      <n-spin :show="loadingRules">
-        <n-data-table
-          :columns="columns"
-          :data="firewallRules"
-          :pagination="{ pageSize: 10 }"
-          :bordered="false"
-        />
-      </n-spin>
-    </n-card>
+    <!-- Content Area -->
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+      <!-- Main Rules Table -->
+      <div class="xl:col-span-3 space-y-6">
+        <GlassCard :padding="0" class="overflow-hidden">
+          <div v-if="loadingRules" class="py-24 flex flex-col items-center justify-center">
+            <div class="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            <p class="mt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">{{ t('firewall.syncing') }}</p>
+          </div>
 
-    <!-- 常用规则模板 -->
-    <n-card title="常用规则模板">
-      <n-grid :cols="2" :x-gap="16" :y-gap="16">
-        <n-gi v-for="template in ruleTemplates" :key="template.id">
-          <n-card :title="template.name" size="small" hoverable>
-            <n-space vertical>
-              <n-text>{{ template.description }}</n-text>
-              <n-code :code="template.expression" language="javascript" />
-              <n-button size="small" @click="useTemplate(template)">
-                使用此模板
-              </n-button>
-            </n-space>
-          </n-card>
-        </n-gi>
-      </n-grid>
-    </n-card>
+          <div v-else-if="firewallRules.length > 0" class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead>
+                <tr class="bg-foreground/[0.03]">
+                  <th class="py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">{{ t('firewall.colDescription') }}</th>
+                  <th class="py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">{{ t('firewall.colExpression') }}</th>
+                  <th class="py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">{{ t('firewall.colAction') }}</th>
+                  <th class="py-4 px-6 text-xs font-bold uppercase tracking-widest text-muted-foreground">{{ t('firewall.colStatus') }}</th>
+                  <th class="py-4 px-6 text-right text-xs font-bold uppercase tracking-widest text-muted-foreground">{{ t('common.actions') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border/30">
+                <tr v-for="rule in firewallRules" :key="rule.id" class="group hover:bg-primary/[0.02] transition-colors">
+                  <td class="py-4 px-6">
+                    <div class="font-bold text-sm text-foreground truncate max-w-[200px]" :title="rule.description">
+                      {{ rule.description || t('firewall.unnamedRule') }}
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div class="font-mono text-[10px] bg-foreground/5 px-2 py-1 rounded max-w-[300px] truncate opacity-80 group-hover:opacity-100 transition-opacity">
+                      {{ rule.filter?.expression }}
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <GlassBadge :variant="getActionVariant(rule.action)">
+                      {{ rule.action.toUpperCase() }}
+                    </GlassBadge>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div class="flex items-center gap-2">
+                      <div class="w-2 h-2 rounded-full" :class="rule.paused ? 'bg-amber-500' : 'bg-emerald-500'"></div>
+                      <span class="text-xs font-bold">{{ rule.paused ? t('firewall.statusPaused') : t('firewall.statusActive') }}</span>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6 text-right">
+                    <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button @click="handleEdit(rule)" class="p-2 hover:bg-primary/10 rounded-lg text-primary transition-all">
+                        <component :is="BuildOutline" class="w-4 h-4" />
+                      </button>
+                      <button @click="handleDelete(rule)" class="p-2 hover:bg-danger/10 rounded-lg text-danger transition-all">
+                        <component :is="TrashOutline" class="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-    <!-- 添加规则弹窗 -->
-    <n-modal v-model:show="showAddModal" preset="dialog" title="添加防火墙规则" style="width: 700px">
-      <n-form
-        ref="formRef"
-        :model="ruleForm"
-        :rules="formRules"
-        label-placement="left"
-        label-width="120"
-      >
-        <n-form-item label="规则描述" path="description">
-          <n-input
-            v-model:value="ruleForm.description"
-            placeholder="例如: 阻止非中国大陆访问"
-          />
-        </n-form-item>
+          <!-- Empty State -->
+          <div v-else class="py-24 flex flex-col items-center text-center px-6">
+            <div class="w-16 h-16 rounded-3xl bg-muted flex items-center justify-center text-muted-foreground mb-6 shadow-inner">
+              <component :is="ShieldCheckmarkOutline" class="w-8 h-8" />
+            </div>
+            <h3 class="text-xl font-bold">{{ currentZone ? t('firewall.noRules') : t('zones.notSelected') }}</h3>
+            <p class="text-sm text-muted-foreground max-w-xs mt-3 leading-relaxed">
+              {{ currentZone ? t('firewall.noRulesDesc') : t('firewall.selectZoneDesc') }}
+            </p>
+            <IslandButton v-if="currentZone" class="mt-8" @click="showAddModal = true">
+              {{ t('firewall.createFirstRule') }}
+            </IslandButton>
+          </div>
+        </GlassCard>
+      </div>
 
-        <n-form-item label="过滤表达式" path="expression">
-          <n-input
-            v-model:value="ruleForm.expression"
-            type="textarea"
-            :rows="4"
-            placeholder="例如: (ip.geoip.country ne &quot;CN&quot;)"
-          />
-          <template #feedback>
-            <n-text depth="3">
-              使用 Cloudflare 表达式语法,参考模板或
-              <n-a href="https://developers.cloudflare.com/ruleset-engine/rules-language/" target="_blank">
-                官方文档
-              </n-a>
-            </n-text>
-          </template>
-        </n-form-item>
+      <!-- Rule Templates Sidebar -->
+      <div class="space-y-6">
+        <h3 class="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">{{ t('firewall.templates') }}</h3>
+        <div class="space-y-4">
+          <GlassCard 
+            v-for="template in ruleTemplates" 
+            :key="template.id" 
+            :padding="5"
+            class="group cursor-pointer hover:border-primary/50 transition-all active:scale-95"
+            @click="useTemplate(template)"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <component :is="FlashOutline" class="w-4 h-4" />
+              </div>
+              <h4 class="font-bold text-sm group-hover:text-primary transition-colors">{{ t(`firewall.templateName_${template.id}`) }}</h4>
+            </div>
+            <p class="text-[11px] text-muted-foreground leading-relaxed mb-3">{{ t(`firewall.templateDesc_${template.id}`) }}</p>
+            <div class="font-mono text-[9px] bg-slate-950 text-emerald-500/80 p-2 rounded-lg truncate">
+              {{ template.expression }}
+            </div>
+          </GlassCard>
+        </div>
+      </div>
+    </div>
 
-        <n-form-item label="动作" path="action">
-          <n-select
-            v-model:value="ruleForm.action"
-            :options="actionOptions"
-          />
-        </n-form-item>
+    <!-- Modals -->
+    <n-modal v-model:show="showAddModal">
+      <GlassCard class="w-[600px] max-w-[95vw]" :padding="0">
+        <div class="p-6 border-b border-border/50 flex justify-between items-center">
+          <h2 class="text-xl font-bold">{{ t('firewall.createTitle') }}</h2>
+          <button @click="showAddModal = false" class="text-muted-foreground hover:text-foreground">
+            <component :is="CloseOutline" class="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div class="p-8 space-y-6">
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">{{ t('firewall.colDescription') }}</label>
+              <input
+                v-model="ruleForm.description"
+                class="w-full bg-foreground/5 border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                :placeholder="t('firewall.descPlaceholder')"
+              />
+            </div>
 
-        <n-form-item label="规则状态" path="paused">
-          <n-switch v-model:value="ruleForm.paused">
-            <template #checked>已暂停</template>
-            <template #unchecked>已启用</template>
-          </n-switch>
-        </n-form-item>
-      </n-form>
+            <div class="space-y-2">
+              <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">{{ t('firewall.colExpression') }}</label>
+              <textarea
+                v-model="ruleForm.expression"
+                class="w-full h-32 bg-slate-950 text-emerald-500 border border-border/50 rounded-xl p-4 font-mono text-xs focus:outline-none shadow-inner"
+                placeholder='(ip.geoip.country ne "CN")'
+              ></textarea>
+            </div>
 
-      <template #action>
-        <n-space>
-          <n-button @click="showAddModal = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleAddRule">
-            确认
-          </n-button>
-        </n-space>
-      </template>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">{{ t('firewall.colAction') }}</label>
+                <select v-model="ruleForm.action" class="w-full bg-foreground/5 border border-border/50 rounded-xl px-4 py-3 text-sm outline-none appearance-none cursor-pointer">
+                  <option v-for="opt in actionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+              <div class="space-y-2">
+                <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">{{ t('firewall.initialStatus') }}</label>
+                <div class="flex items-center gap-3 h-[46px] px-4 bg-foreground/5 border border-border/50 rounded-xl">
+                  <n-switch v-model:value="ruleForm.paused" size="small" />
+                  <span class="text-xs font-bold">{{ ruleForm.paused ? t('firewall.statusPaused') : t('firewall.statusEnabled') }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-6 border-t border-border/50 flex justify-end gap-3">
+          <IslandButton variant="secondary" @click="showAddModal = false">{{ t('common.cancel') }}</IslandButton>
+          <IslandButton @click="handleAddRule" :loading="submitting">{{ t('common.save') }}</IslandButton>
+        </div>
+      </GlassCard>
     </n-modal>
 
-    <!-- 编辑规则弹窗 -->
-    <n-modal v-model:show="showEditModal" preset="dialog" title="编辑防火墙规则" style="width: 700px">
-      <n-form
-        ref="editFormRef"
-        :model="editForm"
-        :rules="formRules"
-        label-placement="left"
-        label-width="120"
-      >
-        <n-form-item label="规则描述" path="description">
-          <n-input v-model:value="editForm.description" />
-        </n-form-item>
+    <n-modal v-model:show="showEditModal">
+      <GlassCard class="w-[600px] max-w-[95vw]" :padding="0">
+        <div class="p-6 border-b border-border/50 flex justify-between items-center">
+          <h2 class="text-xl font-bold">{{ t('firewall.editTitle') }}</h2>
+          <button @click="showEditModal = false" class="text-muted-foreground hover:text-foreground">
+            <component :is="CloseOutline" class="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div class="p-8 space-y-6">
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">{{ t('firewall.colDescription') }}</label>
+              <input
+                v-model="editForm.description"
+                class="w-full bg-foreground/5 border border-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+              />
+            </div>
 
-        <n-form-item label="过滤表达式" path="expression">
-          <n-input
-            v-model:value="editForm.filter.expression"
-            type="textarea"
-            :rows="4"
-            disabled
-          />
-          <template #feedback>
-            <n-text depth="3">表达式创建后无法修改,如需更改请删除后重新创建</n-text>
-          </template>
-        </n-form-item>
+            <div class="space-y-2 opacity-60">
+              <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground text-danger">{{ t('firewall.expressionReadOnly') }}</label>
+              <div class="w-full bg-slate-900 text-slate-500 border border-border/50 rounded-xl p-4 font-mono text-xs shadow-inner">
+                {{ editForm.filter.expression }}
+              </div>
+            </div>
 
-        <n-form-item label="动作" path="action">
-          <n-select
-            v-model:value="editForm.action"
-            :options="actionOptions"
-          />
-        </n-form-item>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">{{ t('firewall.colAction') }}</label>
+                <select v-model="editForm.action" class="w-full bg-foreground/5 border border-border/50 rounded-xl px-4 py-3 text-sm outline-none appearance-none cursor-pointer">
+                  <option v-for="opt in actionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+              <div class="space-y-2">
+                <label class="text-xs font-bold ml-1 uppercase tracking-widest text-muted-foreground">{{ t('firewall.colStatus') }}</label>
+                <div class="flex items-center gap-3 h-[46px] px-4 bg-foreground/5 border border-border/50 rounded-xl">
+                  <n-switch v-model:value="editForm.paused" size="small" />
+                  <span class="text-xs font-bold">{{ editForm.paused ? t('firewall.statusPaused') : t('firewall.statusActive') }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <n-form-item label="规则状态" path="paused">
-          <n-switch v-model:value="editForm.paused">
-            <template #checked>已暂停</template>
-            <template #unchecked>已启用</template>
-          </n-switch>
-        </n-form-item>
-      </n-form>
-
-      <template #action>
-        <n-space>
-          <n-button @click="showEditModal = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleUpdateRule">
-            确认
-          </n-button>
-        </n-space>
-      </template>
+        <div class="p-6 border-t border-border/50 flex justify-end gap-3">
+          <IslandButton variant="secondary" @click="showEditModal = false">{{ t('common.cancel') }}</IslandButton>
+          <IslandButton @click="handleUpdateRule" :loading="submitting">{{ t('common.update') }}</IslandButton>
+        </div>
+      </GlassCard>
     </n-modal>
-  </n-space>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, h, watch, inject, type Ref } from 'vue'
-import { useMessage, NButton, NSpace, NTag, NCode } from 'naive-ui'
+import { ref, onMounted, watch, inject, type Ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { NModal, NSwitch } from 'naive-ui'
+import { 
+  AddOutline, 
+  ShieldCheckmarkOutline, 
+  TrashOutline, 
+  BuildOutline, 
+  CloseOutline,
+  FlashOutline 
+} from '@vicons/ionicons5'
 import { cloudflareApi, type FirewallRule, type Zone } from '@/api'
 import { toast } from '@/utils/toast'
 import { logHistory } from '@/utils/history'
 import { useAccountStore } from '@/stores/account'
+import GlassCard from '@/components/ui/GlassCard.vue'
+import IslandButton from '@/components/ui/IslandButton.vue'
+import GlassBadge from '@/components/ui/GlassBadge.vue'
 
+const { t } = useI18n()
 const accountStore = useAccountStore()
-const message = useMessage()
-
-// 从 Layout 获取当前域名
 const currentZone = inject<Ref<Zone | null>>('currentZone')
 
 const loadingRules = ref(false)
@@ -182,151 +271,47 @@ const editForm = ref<FirewallRule>({
   paused: false
 })
 
-const formRules = {
-  description: { required: true, message: '请输入规则描述', trigger: 'blur' },
-  expression: { required: true, message: '请输入过滤表达式', trigger: 'blur' },
-  action: { required: true, message: '请选择动作', trigger: 'change' }
-}
-
-const actionOptions = [
-  { label: '阻止 (Block)', value: 'block' },
-  { label: 'JS 质询 (JS Challenge)', value: 'js_challenge' },
-  { label: '托管质询 (Managed Challenge)', value: 'managed_challenge' },
-  { label: '允许 (Allow)', value: 'allow' },
-  { label: '记录 (Log)', value: 'log' }
-]
+const actionOptions = computed(() => [
+  { label: `${t('firewall.actionBlock')} (Block)`, value: 'block' },
+  { label: `${t('firewall.actionJSChallenge')} (JS Challenge)`, value: 'js_challenge' },
+  { label: `${t('firewall.actionManagedChallenge')} (Managed Challenge)`, value: 'managed_challenge' },
+  { label: `${t('firewall.actionAllow')} (Allow)`, value: 'allow' },
+  { label: `${t('firewall.actionLog')} (Log)`, value: 'log' }
+])
 
 const ruleTemplates = [
-  {
-    id: 1,
-    name: '阻止特定国家',
-    description: '阻止来自特定国家的访问',
-    expression: '(ip.geoip.country eq "XX")'
-  },
-  {
-    id: 2,
-    name: '仅允许中国大陆',
-    description: '仅允许来自中国大陆的访问',
-    expression: '(ip.geoip.country ne "CN")'
-  },
-  {
-    id: 3,
-    name: '阻止恶意爬虫',
-    description: '阻止包含bot关键字的UA,但允许Googlebot',
-    expression: '(http.user_agent contains "bot" and not http.user_agent contains "Googlebot")'
-  },
-  {
-    id: 4,
-    name: 'API频率限制',
-    description: '限制API路径的访问频率',
-    expression: '(http.request.uri.path contains "/api/" and rate(ip.src, 100/1m))'
-  },
-  {
-    id: 5,
-    name: '保护管理后台',
-    description: '仅允许中国访问管理后台',
-    expression: '(ip.geoip.country ne "CN" and http.request.uri.path eq "/admin")'
-  },
-  {
-    id: 6,
-    name: '阻止特定IP',
-    description: '阻止特定IP地址或IP段',
-    expression: '(ip.src in {192.168.1.1 192.168.1.0/24})'
-  }
+  { id: 1, expression: '(ip.geoip.country eq "XX")' },
+  { id: 2, expression: '(ip.geoip.country ne "CN")' },
+  { id: 3, expression: '(http.user_agent contains "bot" and not http.user_agent contains "Googlebot")' },
+  { id: 4, expression: '(http.request.uri.path contains "/api/" and rate(ip.src, 100/1m))' },
+  { id: 5, expression: '(ip.geoip.country ne "CN" and http.request.uri.path eq "/admin")' },
+  { id: 6, expression: '(ip.src in {192.168.1.1 192.168.1.0/24})' }
 ]
 
-const columns = [
-  {
-    title: '描述',
-    key: 'description',
-    ellipsis: { tooltip: true }
-  },
-  {
-    title: '表达式',
-    key: 'filter.expression',
-    render: (row: FirewallRule) =>
-      h(
-        NCode,
-        { code: row.filter.expression, language: 'javascript', style: 'font-size: 12px' }
-      ),
-    ellipsis: { tooltip: true }
-  },
-  {
-    title: '动作',
-    key: 'action',
-    width: 150,
-    render: (row: FirewallRule) => {
-      const typeMap: Record<string, any> = {
-        block: 'error',
-        allow: 'success',
-        log: 'info',
-        js_challenge: 'warning',
-        managed_challenge: 'warning'
-      }
-      return h(
-        NTag,
-        { type: typeMap[row.action] || 'default', size: 'small' },
-        { default: () => row.action }
-      )
-    }
-  },
-  {
-    title: '状态',
-    key: 'paused',
-    width: 100,
-    render: (row: FirewallRule) =>
-      h(
-        NTag,
-        { type: row.paused ? 'warning' : 'success', size: 'small' },
-        { default: () => (row.paused ? '已暂停' : '已启用') }
-      )
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 150,
-    render: (row: FirewallRule) =>
-      h(
-        NSpace,
-        {},
-        {
-          default: () => [
-            h(
-              NButton,
-              {
-                size: 'small',
-                onClick: () => handleEdit(row)
-              },
-              { default: () => '编辑' }
-            ),
-            h(
-              NButton,
-              {
-                size: 'small',
-                type: 'error',
-                secondary: true,
-                onClick: () => handleDelete(row)
-              },
-              { default: () => '删除' }
-            )
-          ]
-        }
-      )
+function getActionVariant(action: string): 'danger' | 'success' | 'info' | 'warning' {
+  const map: Record<string, any> = {
+    block: 'danger',
+    allow: 'success',
+    log: 'info',
+    js_challenge: 'warning',
+    managed_challenge: 'warning'
   }
-]
+  return map[action] || 'info'
+}
 
 async function loadFirewallRules() {
-  if (!currentZone?.value?.id) {
-    console.log('No currentZone available')
+  if (!currentZone?.value?.id || !accountStore.currentAccount) {
+    firewallRules.value = []
     return
   }
 
-  console.log('Loading firewall rules for zone:', currentZone.value.name)
   loadingRules.value = true
   try {
     firewallRules.value = await cloudflareApi.getFirewallRules(currentZone.value.id)
-  } catch (error) {
-    message.error('加载防火墙规则失败')
+  } catch (error: any) {
+    if (!error.silent) {
+      toast.error(t('firewall.loadFailed'))
+    }
   } finally {
     loadingRules.value = false
   }
@@ -334,15 +319,12 @@ async function loadFirewallRules() {
 
 function useTemplate(template: any) {
   ruleForm.value.expression = template.expression
-  ruleForm.value.description = template.name
+  ruleForm.value.description = t(`firewall.templateName_${template.id}`)
   showAddModal.value = true
 }
 
 async function handleAddRule() {
-  if (!currentZone?.value?.id) {
-    message.error('未选择域名')
-    return
-  }
+  if (!currentZone?.value?.id) return
 
   submitting.value = true
   try {
@@ -356,8 +338,8 @@ async function handleAddRule() {
       paused: ruleForm.value.paused
     })
 
-    logHistory.firewall('创建防火墙规则', ruleForm.value.description || '新规则')
-    toast.success('防火墙规则已创建')
+    logHistory.firewall('创建规则', ruleForm.value.description || '新规则')
+    toast.success(t('firewall.createSuccess'))
     showAddModal.value = false
     ruleForm.value = {
       description: '',
@@ -367,22 +349,19 @@ async function handleAddRule() {
     }
     await loadFirewallRules()
   } catch (error: any) {
-    message.error(error?.message || '删除失败')
+    toast.error(error?.message || t('common.updateFailed'))
   } finally {
     submitting.value = false
   }
 }
 
 function handleEdit(rule: FirewallRule) {
-  editForm.value = { ...rule }
+  editForm.value = JSON.parse(JSON.stringify(rule))
   showEditModal.value = true
 }
 
 async function handleUpdateRule() {
-  if (!currentZone?.value?.id) {
-    message.error('未选择域名')
-    return
-  }
+  if (!currentZone?.value?.id) return
 
   submitting.value = true
   try {
@@ -392,28 +371,26 @@ async function handleUpdateRule() {
       editForm.value
     )
 
-    message.success('防火墙规则更新成功')
+    toast.success(t('common.updateSuccess'))
     showEditModal.value = false
     await loadFirewallRules()
   } catch (error: any) {
-    message.error(error?.message || '更新失败')
+    toast.error(error?.message || t('common.updateFailed'))
   } finally {
     submitting.value = false
   }
 }
 
 async function handleDelete(rule: FirewallRule) {
-  if (!currentZone?.value?.id) {
-    message.error('未选择域名')
-    return
-  }
+  if (!currentZone?.value?.id) return
+  if (!confirm(t('firewall.deleteConfirm', { name: rule.description || t('firewall.unnamedRule') }))) return
 
   try {
     await cloudflareApi.deleteFirewallRule(currentZone.value.id, rule.id!)
-    message.success('防火墙规则删除成功')
+    toast.success(t('common.deleteSuccess'))
     await loadFirewallRules()
   } catch (error: any) {
-    message.error(error?.message || '删除失败')
+    toast.error(error?.message || t('common.deleteFailed'))
   }
 }
 
@@ -421,7 +398,6 @@ onMounted(() => {
   loadFirewallRules()
 })
 
-// 监听 currentZone 变化，自动重新加载防火墙规则
 watch(() => currentZone?.value?.id, () => {
   loadFirewallRules()
 })

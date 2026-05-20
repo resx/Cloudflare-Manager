@@ -1,261 +1,278 @@
 <template>
-  <n-space vertical :size="24">
-    <n-card title="DNS 记录管理">
-      <template #header-extra>
-        <n-space>
-          <n-button @click="showBatchImportModal = true">
-            批量导入
-          </n-button>
-          <n-button type="primary" @click="showAddModal = true">
-            添加记录
-          </n-button>
-        </n-space>
-      </template>
+  <div class="animate-in space-y-6">
+    <!-- Header -->
+    <header class="flex justify-between items-end px-1">
+      <div>
+        <h1 class="text-3xl font-bold text-foreground">{{ t('dns.title') }}</h1>
+        <p class="text-sm text-muted-foreground mt-1 font-medium">{{ t('dns.subtitle') }}</p>
+      </div>
+      <div class="flex gap-3">
+        <IslandButton variant="secondary" @click="showBatchImportModal = true">
+          <template #icon><component :is="DocumentTextOutline" class="w-4 h-4" /></template>
+          {{ t('dns.batchImport') }}
+        </IslandButton>
+        <IslandButton @click="openAddModal">
+          <template #icon><component :is="AddOutline" class="w-4 h-4" /></template>
+          {{ t('dns.addRecord') }}
+        </IslandButton>
+      </div>
+    </header>
 
-      <n-spin :show="loadingRecords">
-        <n-data-table
-          :columns="columns"
-          :data="dnsRecords"
-          :pagination="{ pageSize: 10 }"
-          :bordered="false"
-        />
-      </n-spin>
-    </n-card>
+    <!-- DNS Records Area -->
+    <GlassCard :padding="0" class="overflow-hidden">
+      <!-- Loading State -->
+      <div v-if="loadingRecords" class="py-24 flex flex-col items-center justify-center">
+        <div class="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+        <p class="mt-4 text-sm text-muted-foreground font-medium">{{ t('dns.loadingRecords') }}</p>
+      </div>
 
-    <!-- 批量导入弹窗 -->
-    <n-modal v-model:show="showBatchImportModal" preset="card" title="批量导入 DNS 记录" style="width: 800px">
-      <n-space vertical :size="16">
-        <n-alert type="info">
-          <template #header>导入格式说明</template>
-          支持 CSV 格式，每行一条记录。格式：类型,名称,内容,TTL,是否代理,优先级<br/>
-          示例：<br/>
-          <n-code :code="csvExample" language="csv" style="margin-top: 8px" />
-        </n-alert>
+      <!-- Records Table -->
+      <div v-else-if="dnsRecords.length > 0" class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-foreground/5 text-muted-foreground text-xs font-bold uppercase tracking-wider border-b border-border/50">
+              <th class="text-left py-4 px-6">{{ t('dns.type') }}</th>
+              <th class="text-left py-4 px-6">{{ t('dns.name') }}</th>
+              <th class="text-left py-4 px-6">{{ t('dns.content') }}</th>
+              <th class="text-left py-4 px-6">{{ t('dns.ttl') }}</th>
+              <th class="text-left py-4 px-6">{{ t('dns.proxyStatus') }}</th>
+              <th class="text-right py-4 px-6">{{ t('dns.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border/50">
+            <tr 
+              v-for="record in dnsRecords" 
+              :key="record.id"
+              class="hover:bg-foreground/[0.02] transition-colors group text-sm"
+            >
+              <td class="py-4 px-6">
+                <GlassBadge :variant="getBadgeVariant(record.type)" class="font-mono">
+                  {{ record.type }}
+                </GlassBadge>
+              </td>
+              <td class="py-4 px-6 font-bold text-foreground">{{ record.name }}</td>
+              <td class="py-4 px-6 max-w-xs">
+                <div class="truncate text-muted-foreground font-mono text-xs" :title="record.content">
+                  {{ formatContent(record) }}
+                </div>
+              </td>
+              <td class="py-4 px-6 text-muted-foreground whitespace-nowrap">
+                {{ formatTTL(record.ttl) }}
+              </td>
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-2">
+                  <div 
+                    :class="[
+                      'w-2.5 h-2.5 rounded-full transition-all duration-500',
+                      record.proxied ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-slate-400 opacity-50'
+                    ]"
+                  ></div>
+                  <span :class="record.proxied ? 'text-orange-500 font-bold' : 'text-muted-foreground font-medium'">
+                    {{ record.proxied ? t('dns.proxied') : t('dns.dnsOnly') }}
+                  </span>
+                </div>
+              </td>
+              <td class="py-4 px-6 text-right">
+                <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <IslandButton size="small" variant="ghost" @click="handleEdit(record)">{{ t('common.edit') }}</IslandButton>
+                  <IslandButton size="small" variant="danger" @click="handleDelete(record)">{{ t('common.delete') }}</IslandButton>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-        <n-form-item label="导入方式">
-          <n-radio-group v-model:value="importMethod">
-            <n-space>
-              <n-radio value="paste">粘贴文本</n-radio>
-              <n-radio value="file">上传文件</n-radio>
-            </n-space>
-          </n-radio-group>
-        </n-form-item>
+      <!-- Empty State -->
+      <div v-else class="py-32 flex flex-col items-center text-center">
+        <div class="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground mb-4">
+          <component :is="BuildOutline" class="w-8 h-8" />
+        </div>
+        <h3 class="text-xl font-bold">{{ t('dns.noRecords') }}</h3>
+        <p class="text-sm text-muted-foreground mt-2 max-w-xs">
+          {{ t('dns.noRecordsDesc') }}
+        </p>
+      </div>
+    </GlassCard>
 
-        <n-form-item v-if="importMethod === 'paste'" label="CSV 数据">
-          <n-input
-            v-model:value="batchImportText"
-            type="textarea"
-            placeholder="粘贴 CSV 数据，每行一条记录"
-            :rows="10"
-          />
-        </n-form-item>
+    <!-- Modals -->
+    <n-modal v-model:show="showBatchImportModal" transform-origin="center">
+      <GlassCard class="w-[800px] max-w-[95vw]" :padding="0">
+        <div class="p-6 border-b border-border/50 flex justify-between items-center">
+          <h2 class="text-xl font-bold">{{ t('dns.batchImportTitle') }}</h2>
+          <button @click="showBatchImportModal = false" class="text-muted-foreground hover:text-foreground">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div class="p-8 space-y-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+          <div class="p-4 bg-primary/5 border border-primary/10 rounded-xl text-xs space-y-2">
+            <div class="font-bold text-primary">{{ t('dns.formatHelp') }}</div>
+            <p class="text-muted-foreground">{{ t('dns.formatDesc') }}</p>
+            <div class="bg-foreground/5 p-3 rounded-lg font-mono text-muted-foreground leading-relaxed">
+              A, www, 1.1.1.1, 3600, true<br/>
+              CNAME, blog, example.com, 1, false
+            </div>
+          </div>
 
-        <n-form-item v-if="importMethod === 'file'" label="选择文件">
-          <n-upload
-            :max="1"
-            accept=".csv,.txt"
-            :on-change="handleFileUpload"
-            :show-file-list="false"
-          >
-            <n-button>选择 CSV 文件</n-button>
-          </n-upload>
-          <n-text v-if="uploadedFileName" depth="3" style="margin-left: 8px">
-            已选择: {{ uploadedFileName }}
-          </n-text>
-        </n-form-item>
+          <div class="space-y-4">
+            <div class="flex gap-4">
+              <button 
+                v-for="m in [{id:'paste', label:t('dns.pasteText')}, {id:'file', label:t('dns.uploadFile')}]" 
+                :key="m.id"
+                @click="importMethod = m.id"
+                :class="['px-4 py-2 rounded-lg text-sm font-bold transition-all', importMethod === m.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-muted text-muted-foreground hover:bg-muted/80']"
+              >
+                {{ m.label }}
+              </button>
+            </div>
 
-        <n-alert v-if="parseErrors.length > 0" type="error" title="解析错误">
-          <ul style="margin: 0; padding-left: 20px">
-            <li v-for="(error, index) in parseErrors" :key="index">{{ error }}</li>
-          </ul>
-        </n-alert>
+            <textarea
+              v-if="importMethod === 'paste'"
+              v-model="batchImportText"
+              class="w-full h-48 bg-foreground/5 border border-border/50 rounded-xl p-4 font-mono text-xs focus:ring-2 focus:ring-primary/20 outline-none"
+              :placeholder="t('dns.pastePlaceholder')"
+            ></textarea>
 
-        <n-alert v-if="parsedRecords.length > 0" type="success" :title="`已解析 ${parsedRecords.length} 条记录`">
-          <n-data-table
-            :columns="previewColumns"
-            :data="parsedRecords"
-            :pagination="false"
-            max-height="300"
-            size="small"
-          />
-        </n-alert>
-      </n-space>
+            <div v-if="importMethod === 'file'" class="border-2 border-dashed border-border/50 rounded-2xl p-12 text-center hover:border-primary/50 transition-colors">
+              <input type="file" class="hidden" ref="fileInput" @change="handleFileUpload" accept=".csv,.txt">
+              <div @click="$refs.fileInput?.click()" class="cursor-pointer space-y-2">
+                <div class="text-primary font-bold">{{ t('dns.clickUpload') }}</div>
+                <div class="text-xs text-muted-foreground">{{ uploadedFileName || t('dns.noFileSelected') }}</div>
+              </div>
+            </div>
+          </div>
 
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="handleCancelBatchImport">取消</n-button>
-          <n-button @click="handleParseBatchImport" :disabled="!batchImportText">
-            解析
-          </n-button>
-          <n-button
-            type="primary"
-            :loading="batchImporting"
-            :disabled="parsedRecords.length === 0"
-            @click="handleConfirmBatchImport"
-          >
-            导入 {{ parsedRecords.length }} 条记录
-          </n-button>
-        </n-space>
-      </template>
+          <div v-if="parsedRecords.length > 0" class="space-y-3">
+            <div class="text-sm font-bold flex items-center gap-2">
+              <div class="w-1.5 h-4 bg-primary rounded-full"></div>
+              {{ t('dns.preview', { count: parsedRecords.length }) }}
+            </div>
+            <div class="border border-border/50 rounded-xl overflow-hidden text-xs">
+              <table class="w-full">
+                <thead class="bg-foreground/5 text-muted-foreground">
+                  <tr>
+                    <th class="py-2 px-3 text-left">{{ t('dns.type') }}</th>
+                    <th class="py-2 px-3 text-left">{{ t('dns.name') }}</th>
+                    <th class="py-2 px-3 text-left">{{ t('dns.content') }}</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/30">
+                  <tr v-for="(r, i) in parsedRecords.slice(0, 5)" :key="i">
+                    <td class="py-2 px-3">{{ r.type }}</td>
+                    <td class="py-2 px-3">{{ r.name }}</td>
+                    <td class="py-2 px-3 truncate max-w-[200px]">{{ r.content }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div v-if="parsedRecords.length > 5" class="p-2 bg-foreground/5 text-center text-muted-foreground italic">
+                ... {{ t('dns.andMore', { count: parsedRecords.length - 5 }) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 border-t border-border/50 flex justify-end gap-3">
+          <IslandButton variant="secondary" @click="handleCancelBatchImport">{{ t('common.cancel') }}</IslandButton>
+          <IslandButton variant="ghost" @click="handleParseBatchImport" :disabled="!batchImportText">{{ t('dns.parse') }}</IslandButton>
+          <IslandButton :loading="batchImporting" :disabled="parsedRecords.length === 0" @click="handleConfirmBatchImport">
+            {{ t('dns.confirmImport') }}
+          </IslandButton>
+        </div>
+      </GlassCard>
     </n-modal>
 
-    <!-- 添加 DNS 记录弹窗 -->
-    <n-modal v-model:show="showAddModal" preset="dialog" title="添加 DNS 记录" style="width: 600px">
-      <n-form
-        ref="formRef"
-        :model="dnsForm"
-        :rules="formRules"
-        label-placement="left"
-        label-width="100"
+    <!-- Add/Edit Modal -->
+    <n-modal
+      v-model:show="showFormModal"
+      transform-origin="center"
+      :auto-focus="false"
+      @after-enter="focusRecordTypeSelect"
+    >
+      <GlassCard
+        class="w-[500px]"
+        :padding="0"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="isEditing ? t('dns.editRecord') : t('dns.addRecord')"
       >
-        <n-form-item label="记录类型" path="type">
-          <n-select
-            v-model:value="dnsForm.type"
-            :options="recordTypeOptions"
-          />
-        </n-form-item>
-
-        <n-form-item label="名称" path="name">
-          <n-input
-            v-model:value="dnsForm.name"
-            placeholder="例如: www 或 @ (根域名)"
-          />
-        </n-form-item>
-
-        <n-form-item label="内容" path="content">
-          <n-input
-            v-model:value="dnsForm.content"
-            placeholder="例如: 192.168.1.1 或 example.com"
-          />
-        </n-form-item>
-
-        <n-form-item label="TTL" path="ttl">
-          <n-select
-            v-model:value="dnsForm.ttl"
-            :options="ttlOptions"
-            style="width: 100%"
-          />
-        </n-form-item>
-
-        <n-form-item label="代理状态" path="proxied">
-          <n-switch v-model:value="dnsForm.proxied">
-            <template #checked>已代理</template>
-            <template #unchecked>仅 DNS</template>
-          </n-switch>
-        </n-form-item>
-
-        <n-form-item v-if="dnsForm.type === 'MX'" label="优先级" path="priority">
-          <n-input-number
-            v-model:value="dnsForm.priority"
-            :min="0"
-            :max="65535"
-            style="width: 100%"
-          />
-        </n-form-item>
-      </n-form>
-
-      <template #action>
-        <n-space>
-          <n-button @click="showAddModal = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleAddRecord">
-            确认
-          </n-button>
-        </n-space>
-      </template>
+        <div class="p-6 border-b border-border/50 flex justify-between items-center">
+          <h2 class="text-xl font-bold">{{ isEditing ? t('dns.editRecord') : t('dns.addRecord') }}</h2>
+          <button @click="showFormModal = false" class="text-muted-foreground hover:text-foreground">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div class="p-8 space-y-5">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <label class="text-xs font-bold ml-1">{{ t('dns.type') }}</label>
+              <select ref="recordTypeSelectRef" v-model="dnsForm.type" class="w-full bg-foreground/5 border border-border/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option v-for="opt in recordTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="space-y-2">
+              <label class="text-xs font-bold ml-1">{{ t('dns.ttl') }}</label>
+              <select v-model="dnsForm.ttl" class="w-full bg-foreground/5 border border-border/50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                <option v-for="opt in ttlOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-bold ml-1">{{ t('dns.name') }}</label>
+            <input v-model="dnsForm.name" class="w-full" :placeholder="t('dns.namePlaceholder')">
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-bold ml-1">{{ t('dns.content') }}</label>
+            <textarea v-model="dnsForm.content" class="w-full h-24 bg-foreground/5 border border-border/50 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-primary/20" :placeholder="t('dns.contentPlaceholder')"></textarea>
+          </div>
+          <div class="flex items-center justify-between p-4 bg-foreground/5 rounded-xl border border-border/50">
+            <div class="flex items-center gap-3">
+              <div :class="['w-10 h-6 rounded-full relative transition-colors duration-300 cursor-pointer', dnsForm.proxied ? 'bg-orange-500' : 'bg-slate-300']" @click="dnsForm.proxied = !dnsForm.proxied">
+                <div :class="['w-4 h-4 bg-white rounded-full absolute top-1 transition-all duration-300', dnsForm.proxied ? 'left-5' : 'left-1']"></div>
+              </div>
+              <div>
+                <div class="text-sm font-bold">{{ t('dns.proxy') }}</div>
+                <div class="text-[10px] text-muted-foreground">{{ t('dns.proxyDesc') }}</div>
+              </div>
+            </div>
+            <component :is="CloudOutline" :class="['w-6 h-6', dnsForm.proxied ? 'text-orange-500' : 'text-muted-foreground opacity-30']" />
+          </div>
+        </div>
+        <div class="p-6 border-t border-border/50 flex justify-end gap-3">
+          <IslandButton variant="secondary" @click="showFormModal = false">{{ t('common.cancel') }}</IslandButton>
+          <IslandButton :loading="submitting" @click="handleSaveRecord">{{ t('common.save') }}</IslandButton>
+        </div>
+      </GlassCard>
     </n-modal>
-
-    <!-- 编辑 DNS 记录弹窗 -->
-    <n-modal v-model:show="showEditModal" preset="dialog" title="编辑 DNS 记录" style="width: 600px">
-      <n-form
-        ref="editFormRef"
-        :model="editForm"
-        :rules="formRules"
-        label-placement="left"
-        label-width="100"
-      >
-        <n-form-item label="记录类型" path="type">
-          <n-select
-            v-model:value="editForm.type"
-            :options="recordTypeOptions"
-          />
-        </n-form-item>
-
-        <n-form-item label="名称" path="name">
-          <n-input v-model:value="editForm.name" />
-        </n-form-item>
-
-        <n-form-item label="内容" path="content">
-          <n-input v-model:value="editForm.content" />
-        </n-form-item>
-
-        <n-form-item label="TTL" path="ttl">
-          <n-select
-            v-model:value="editForm.ttl"
-            :options="ttlOptions"
-            style="width: 100%"
-          />
-        </n-form-item>
-
-        <n-form-item label="代理状态" path="proxied">
-          <n-switch v-model:value="editForm.proxied">
-            <template #checked>已代理</template>
-            <template #unchecked>仅 DNS</template>
-          </n-switch>
-        </n-form-item>
-      </n-form>
-
-      <template #action>
-        <n-space>
-          <n-button @click="showEditModal = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleUpdateRecord">
-            确认
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
-  </n-space>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, h, watch, inject, type Ref } from 'vue'
-import { NButton, NSpace, NTag, NSwitch } from 'naive-ui'
+import { ref, onMounted, watch, inject, type Ref, computed, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { NModal } from 'naive-ui'
 import { cloudflareApi, type Zone, type DnsRecord } from '@/api'
 import { toast } from '@/utils/toast'
 import { logHistory } from '@/utils/history'
+import GlassCard from '@/components/ui/GlassCard.vue'
+import IslandButton from '@/components/ui/IslandButton.vue'
+import GlassBadge from '@/components/ui/GlassBadge.vue'
+import {
+  AddOutline,
+  DocumentTextOutline,
+  BuildOutline,
+  CloudOutline,
+} from '@vicons/ionicons5'
 
-// 从 Layout 获取当前域名
+const { t, locale } = useI18n()
 const currentZone = inject<Ref<Zone | null>>('currentZone')
 
 const loadingRecords = ref(false)
 const submitting = ref(false)
-const showAddModal = ref(false)
-const showEditModal = ref(false)
+const showFormModal = ref(false)
+const isEditing = ref(false)
+const editingId = ref<string | null>(null)
+const recordTypeSelectRef = ref<HTMLSelectElement | null>(null)
 
-// 批量导入相关
-const showBatchImportModal = ref(false)
-const batchImporting = ref(false)
-const batchImportText = ref('')
-const importMethod = ref('paste')
-const uploadedFileName = ref('')
-const parsedRecords = ref<DnsRecord[]>([])
-const parseErrors = ref<string[]>([])
-
-const csvExample = `A,www,192.168.1.1,3600,true
-AAAA,www,2001:db8::1,3600,true
-CNAME,blog,example.com,1,false
-MX,@,mail.example.com,3600,false,10
-TXT,@,"v=spf1 include:_spf.example.com ~all",1,false`
-
-const previewColumns = [
-  { title: '类型', key: 'type', width: 80 },
-  { title: '名称', key: 'name', width: 120 },
-  { title: '内容', key: 'content', ellipsis: { tooltip: true } },
-  { title: 'TTL', key: 'ttl', width: 80 },
-  { title: '代理', key: 'proxied', width: 60, render: (row: any) => row.proxied ? '是' : '否' }
-]
-
-const dnsRecords = ref<DnsRecord[]>([])
-
+// Forms
 const dnsForm = ref({
   type: 'A',
   name: '',
@@ -265,20 +282,18 @@ const dnsForm = ref({
   priority: 10
 })
 
-const editForm = ref<DnsRecord>({
-  zone_id: '',
-  type: 'A',
-  name: '',
-  content: '',
-  ttl: 1,
-  proxied: true
-})
+// Batch Import
+const showBatchImportModal = ref(false)
+const batchImporting = ref(false)
+const batchImportText = ref('')
+const importMethod = ref('paste')
+const uploadedFileName = ref('')
+const parsedRecords = ref<DnsRecord[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
 
-const formRules = {
-  name: { required: true, message: '请输入名称', trigger: 'blur' },
-  content: { required: true, message: '请输入内容', trigger: 'blur' }
-}
+const dnsRecords = ref<DnsRecord[]>([])
 
+// Options
 const recordTypeOptions = [
   { label: 'A', value: 'A' },
   { label: 'AAAA', value: 'AAAA' },
@@ -287,368 +302,184 @@ const recordTypeOptions = [
   { label: 'TXT', value: 'TXT' },
   { label: 'SRV', value: 'SRV' },
   { label: 'NS', value: 'NS' },
-  { label: 'CAA', value: 'CAA' },
-  { label: 'CERT', value: 'CERT' },
-  { label: 'DNSKEY', value: 'DNSKEY' },
-  { label: 'DS', value: 'DS' },
-  { label: 'HTTPS', value: 'HTTPS' },
-  { label: 'LOC', value: 'LOC' },
-  { label: 'NAPTR', value: 'NAPTR' },
-  { label: 'PTR', value: 'PTR' },
-  { label: 'SMIMEA', value: 'SMIMEA' },
-  { label: 'SPF', value: 'SPF' },
-  { label: 'SSHFP', value: 'SSHFP' },
-  { label: 'SVCB', value: 'SVCB' },
-  { label: 'TLSA', value: 'TLSA' },
-  { label: 'URI', value: 'URI' }
+  { label: 'CAA', value: 'CAA' }
 ]
 
-// TTL 选项（参照 Cloudflare 标准）
-const ttlOptions = [
-  { label: '自动', value: 1 },
-  { label: '2 分钟', value: 120 },
-  { label: '5 分钟', value: 300 },
-  { label: '10 分钟', value: 600 },
-  { label: '15 分钟', value: 900 },
-  { label: '30 分钟', value: 1800 },
-  { label: '1 小时', value: 3600 },
-  { label: '2 小时', value: 7200 },
-  { label: '5 小时', value: 18000 },
-  { label: '12 小时', value: 43200 },
-  { label: '1 天', value: 86400 }
-]
+const ttlOptions = computed(() => [
+  { label: t('dns.ttlAuto'), value: 1 },
+  { label: `2 ${t('common.minutes')}`, value: 120 },
+  { label: `5 ${t('common.minutes')}`, value: 300 },
+  { label: `10 ${t('common.minutes')}`, value: 600 },
+  { label: `15 ${t('common.minutes')}`, value: 900 },
+  { label: `30 ${t('common.minutes')}`, value: 1800 },
+  { label: `1 ${t('common.hours')}`, value: 3600 },
+  { label: `1 ${t('common.days')}`, value: 86400 }
+])
 
-const columns = [
-  { title: '类型', key: 'type', width: 80 },
-  { title: '名称', key: 'name' },
-  {
-    title: '内容',
-    key: 'content',
-    render: (row: DnsRecord) => {
-      // 移除 TXT 记录值外部的双引号
-      if (row.type === 'TXT' && row.content.startsWith('"') && row.content.endsWith('"')) {
-        return row.content.slice(1, -1)
-      }
-      return row.content
-    }
-  },
-  {
-    title: 'TTL',
-    key: 'ttl',
-    width: 100,
-    render: (row: DnsRecord) => {
-      // Cloudflare 的 TTL 显示格式
-      if (row.ttl === 1) return '自动'
-      if (row.ttl < 60) return `${row.ttl} 秒`
-      if (row.ttl < 3600) return `${Math.floor(row.ttl / 60)} 分钟`
-      if (row.ttl < 86400) return `${Math.floor(row.ttl / 3600)} 小时`
-      return `${Math.floor(row.ttl / 86400)} 天`
-    }
-  },
-  {
-    title: '代理状态',
-    key: 'proxied',
-    width: 120,
-    render: (row: DnsRecord) =>
-      h(
-        NTag,
-        { type: row.proxied ? 'success' : 'default', size: 'small' },
-        { default: () => (row.proxied ? '已代理' : '仅 DNS') }
-      )
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 150,
-    render: (row: DnsRecord) =>
-      h(
-        NSpace,
-        {},
-        {
-          default: () => [
-            h(
-              NButton,
-              {
-                size: 'small',
-                onClick: () => handleEdit(row)
-              },
-              { default: () => '编辑' }
-            ),
-            h(
-              NButton,
-              {
-                size: 'small',
-                type: 'error',
-                secondary: true,
-                onClick: () => handleDelete(row)
-              },
-              { default: () => '删除' }
-            )
-          ]
-        }
-      )
+// Formatting Helpers
+const getBadgeVariant = (type: string) => {
+  const map: Record<string, any> = {
+    'A': 'success',
+    'AAAA': 'success',
+    'CNAME': 'info',
+    'MX': 'warning',
+    'TXT': 'info',
   }
-]
+  return map[type] || 'info'
+}
 
+const formatContent = (record: DnsRecord) => {
+  if (record.type === 'TXT' && record.content.startsWith('"') && record.content.endsWith('"')) {
+    return record.content.slice(1, -1)
+  }
+  return record.content
+}
+
+const formatTTL = (ttl: number) => {
+  if (ttl === 1) return t('dns.ttlAuto')
+  if (ttl < 60) return `${ttl}s`
+  if (ttl < 3600) return `${Math.floor(ttl / 60)}m`
+  if (ttl < 86400) return `${Math.floor(ttl / 3600)}h`
+  return `${Math.floor(ttl / 86400)}d`
+}
+
+// Actions
 async function loadDnsRecords() {
-  if (!currentZone?.value?.id) {
-    console.log('No currentZone available')
-    return
-  }
+  if (!currentZone?.value?.id) return
 
-  console.log('Loading DNS records for zone:', currentZone.value.name)
   loadingRecords.value = true
   try {
     const records = await cloudflareApi.getDnsRecords(currentZone.value.id)
-    // 为每条记录添加 zone_id，因为 Cloudflare API 返回的记录不包含此字段
-    dnsRecords.value = records.map(record => ({
-      ...record,
-      zone_id: currentZone.value!.id
-    }))
+    dnsRecords.value = records.map(r => ({ ...r, zone_id: currentZone.value!.id }))
   } catch (error) {
-    toast.error('加载 DNS 记录失败')
+    toast.error(t('dns.loadFailed'))
   } finally {
     loadingRecords.value = false
   }
 }
 
-async function handleAddRecord() {
-  if (!currentZone?.value?.id) {
-    toast.error('未选择域名')
+function openAddModal() {
+  isEditing.value = false
+  editingId.value = null
+  dnsForm.value = {
+    type: 'A',
+    name: '',
+    content: '',
+    ttl: 1,
+    proxied: true,
+    priority: 10
+  }
+  blurActiveElement()
+  showFormModal.value = true
+}
+
+function handleEdit(record: DnsRecord) {
+  isEditing.value = true
+  editingId.value = record.id || null
+  dnsForm.value = {
+    type: record.type,
+    name: record.name,
+    content: formatContent(record),
+    ttl: record.ttl,
+    proxied: record.proxied,
+    priority: record.priority || 10
+  }
+  blurActiveElement()
+  showFormModal.value = true
+}
+
+function blurActiveElement() {
+  const activeElement = document.activeElement
+  if (activeElement instanceof HTMLElement) {
+    activeElement.blur()
+  }
+}
+
+async function focusRecordTypeSelect() {
+  await nextTick()
+  recordTypeSelectRef.value?.focus({ preventScroll: true })
+}
+
+async function handleSaveRecord() {
+  if (!currentZone?.value?.id) return
+  if (!dnsForm.value.name || !dnsForm.value.content) {
+    toast.error(t('common.fillRequired'))
     return
   }
 
   submitting.value = true
   try {
-    const recordToAdd = {
-      zone_id: currentZone.value.id,
-      ...dnsForm.value
+    const payload: any = {
+      ...dnsForm.value,
+      zone_id: currentZone.value.id
     }
-
-    // 为 TXT 记录自动添加引号（如果需要）
-    if (recordToAdd.type === 'TXT' &&
-        !recordToAdd.content.startsWith('"') &&
-        !recordToAdd.content.endsWith('"')) {
-      recordToAdd.content = `"${recordToAdd.content}"`
+    
+    if (isEditing.value) {
+      payload.id = editingId.value
+      await cloudflareApi.updateDnsRecord(payload)
+      toast.success(t('common.updateSuccess'))
+    } else {
+      await cloudflareApi.createDnsRecord(payload)
+      toast.success(t('common.createSuccess'))
     }
-
-    await cloudflareApi.createDnsRecord(recordToAdd)
-    logHistory.dns('添加 DNS 记录', `${dnsForm.value.type} 记录：${dnsForm.value.name} → ${dnsForm.value.content}`)
-    toast.success('DNS 记录已创建')
-    showAddModal.value = false
-    dnsForm.value = {
-      type: 'A',
-      name: '',
-      content: '',
-      ttl: 1,
-      proxied: true,
-      priority: 10
-    }
+    
+    showFormModal.value = false
     await loadDnsRecords()
   } catch (error: any) {
-    toast.error(error?.message || '添加失败')
-  } finally {
-    submitting.value = false
-  }
-}
-
-function handleEdit(record: DnsRecord) {
-  editForm.value = { ...record }
-
-  // 规范化 TTL 值到最接近的预设选项
-  const validTtls = [1, 120, 300, 600, 900, 1800, 3600, 7200, 18000, 43200, 86400]
-  if (!validTtls.includes(editForm.value.ttl)) {
-    // 找到最接近的 TTL 值
-    editForm.value.ttl = validTtls.reduce((prev, curr) =>
-      Math.abs(curr - editForm.value.ttl) < Math.abs(prev - editForm.value.ttl) ? curr : prev
-    )
-  }
-
-  // 移除 TXT 记录值的外部引号，方便编辑
-  if (editForm.value.type === 'TXT' &&
-      editForm.value.content.startsWith('"') &&
-      editForm.value.content.endsWith('"')) {
-    editForm.value.content = editForm.value.content.slice(1, -1)
-  }
-  showEditModal.value = true
-}
-
-async function handleUpdateRecord() {
-  submitting.value = true
-  try {
-    const recordToUpdate = { ...editForm.value }
-
-    // 为 TXT 记录自动添加引号（如果需要）
-    if (recordToUpdate.type === 'TXT' &&
-        !recordToUpdate.content.startsWith('"') &&
-        !recordToUpdate.content.endsWith('"')) {
-      recordToUpdate.content = `"${recordToUpdate.content}"`
-    }
-
-    await cloudflareApi.updateDnsRecord(recordToUpdate)
-    logHistory.dns('更新 DNS 记录', `${editForm.value.type} 记录：${editForm.value.name}`)
-    toast.success('DNS 记录已更新')
-    showEditModal.value = false
-    await loadDnsRecords()
-  } catch (error: any) {
-    toast.error(error?.message || '更新失败')
+    toast.error(error.message || t('common.updateFailed'))
   } finally {
     submitting.value = false
   }
 }
 
 async function handleDelete(record: DnsRecord) {
+  if (!confirm(t('dns.deleteConfirm', { type: record.type, name: record.name }))) return
+  
   try {
-    // 确保 zone_id 和 id 存在
-    if (!record.zone_id || !record.id) {
-      toast.error('记录信息不完整，无法删除')
-      return
-    }
-
     await cloudflareApi.deleteDnsRecord(currentZone.value!.id, record.id!)
-    logHistory.dns('删除 DNS 记录', `${record.type} 记录：${record.name}`)
-    toast.success('DNS 记录已删除')
+    toast.success(t('common.deleteSuccess'))
     await loadDnsRecords()
   } catch (error: any) {
-    toast.error(error?.message || '删除失败')
+    toast.error(error.message || t('common.deleteFailed'))
   }
 }
 
-// 批量导入相关函数
-function handleFileUpload(options: any) {
-  const file = options.file.file
+// Batch Logic
+function handleFileUpload(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
   if (file) {
     uploadedFileName.value = file.name
     const reader = new FileReader()
-    reader.onload = (e) => {
-      batchImportText.value = e.target?.result as string
-    }
+    reader.onload = (ev) => batchImportText.value = ev.target?.result as string
     reader.readAsText(file)
   }
 }
 
 function handleParseBatchImport() {
-  parseErrors.value = []
-  parsedRecords.value = []
-
-  if (!batchImportText.value.trim()) {
-    parseErrors.value.push('请输入要导入的数据')
-    return
-  }
-
   const lines = batchImportText.value.trim().split('\n')
-
-  lines.forEach((line, index) => {
-    const lineNum = index + 1
-    line = line.trim()
-
-    if (!line || line.startsWith('#')) {
-      return // 跳过空行和注释行
+  parsedRecords.value = lines.map(line => {
+    const parts = line.split(',').map(p => p.trim())
+    return {
+      type: parts[0] || 'A',
+      name: parts[1] || '',
+      content: parts[2] || '',
+      ttl: parseInt(parts[3]) || 1,
+      proxied: parts[4] === 'true'
     }
-
-    try {
-      // 处理CSV格式：类型,名称,内容,TTL,是否代理,优先级
-      const parts = line.split(',').map(p => p.trim())
-
-      if (parts.length < 3) {
-        parseErrors.value.push(`第 ${lineNum} 行: 格式不正确，至少需要类型、名称和内容`)
-        return
-      }
-
-      const recordType = parts[0].toUpperCase()
-      const name = parts[1]
-      let content = parts[2]
-      const ttl = parts[3] ? parseInt(parts[3]) : 1
-      const proxied = parts[4] === 'true' || parts[4] === '1'
-      const priority = parts[5] ? parseInt(parts[5]) : undefined
-
-      // 处理TXT记录的引号
-      if (recordType === 'TXT') {
-        // 移除外部引号（如果有）
-        if (content.startsWith('"') && content.endsWith('"')) {
-          content = content.slice(1, -1)
-        }
-        // 确保有引号
-        if (!content.startsWith('"')) {
-          content = `"${content}"`
-        }
-      }
-
-      // 验证记录类型
-      const validTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'SRV', 'NS', 'CAA', 'PTR']
-      if (!validTypes.includes(recordType)) {
-        parseErrors.value.push(`第 ${lineNum} 行: 不支持的记录类型 "${recordType}"`)
-        return
-      }
-
-      const record: DnsRecord = {
-        type: recordType,
-        name: name,
-        content: content,
-        ttl: ttl,
-        proxied: proxied
-      }
-
-      if (priority !== undefined && (recordType === 'MX' || recordType === 'SRV')) {
-        record.priority = priority
-      }
-
-      parsedRecords.value.push(record)
-    } catch (error: any) {
-      parseErrors.value.push(`第 ${lineNum} 行: 解析失败 - ${error.message}`)
-    }
-  })
-
-  if (parsedRecords.value.length === 0 && parseErrors.value.length === 0) {
-    parseErrors.value.push('没有找到有效的 DNS 记录')
-  }
+  }).filter(r => r.name && r.content)
 }
 
 async function handleConfirmBatchImport() {
-  if (!currentZone?.value?.id) {
-    message.error('未选择域名')
-    return
-  }
-
-  if (parsedRecords.value.length === 0) {
-    message.warning('没有要导入的记录')
-    return
-  }
-
   batchImporting.value = true
-  let successCount = 0
-  let failCount = 0
-  const errors: string[] = []
-
   try {
-    for (const record of parsedRecords.value) {
-      try {
-        const recordWithZone = { ...record, zone_id: currentZone.value.id }
-        await cloudflareApi.createDnsRecord(recordWithZone)
-        successCount++
-      } catch (error: any) {
-        failCount++
-        errors.push(`${record.name} (${record.type}): ${error.message || '导入失败'}`)
-      }
+    for (const r of parsedRecords.value) {
+      await cloudflareApi.createDnsRecord({ ...r, zone_id: currentZone.value!.id })
     }
-
-    if (successCount > 0) {
-      message.success(`成功导入 ${successCount} 条记录${failCount > 0 ? `，失败 ${failCount} 条` : ''}`)
-      await loadDnsRecords()
-    }
-
-    if (failCount > 0 && errors.length > 0) {
-      console.error('批量导入错误:', errors)
-      if (failCount === parsedRecords.value.length) {
-        message.error(`所有记录导入失败，请检查格式和权限`)
-      }
-    }
-
-    if (successCount > 0) {
-      handleCancelBatchImport()
-    }
+    toast.success(t('dns.importSuccess', { count: parsedRecords.value.length }))
+    showBatchImportModal.value = false
+    await loadDnsRecords()
   } catch (error: any) {
-    message.error(error?.message || '批量导入失败')
+    toast.error(t('dns.importFailed'))
   } finally {
     batchImporting.value = false
   }
@@ -657,18 +488,9 @@ async function handleConfirmBatchImport() {
 function handleCancelBatchImport() {
   showBatchImportModal.value = false
   batchImportText.value = ''
-  uploadedFileName.value = ''
   parsedRecords.value = []
-  parseErrors.value = []
-  importMethod.value = 'paste'
 }
 
-onMounted(() => {
-  loadDnsRecords()
-})
-
-// 监听 currentZone 变化，自动重新加载 DNS 记录
-watch(() => currentZone?.value?.id, () => {
-  loadDnsRecords()
-})
+onMounted(loadDnsRecords)
+watch(() => currentZone?.value?.id, loadDnsRecords)
 </script>
